@@ -1,0 +1,38 @@
+<head>
+    <style> body { margin: 0; } </style>
+  
+    <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+    <!--<script src="../../dist/3d-force-graph.js"></script>-->
+  </head>
+  
+  <body>
+    <div id="3d-graph"></div>
+  
+    <script>
+      // Random tree
+      const NODES = 300;
+      const GROUPS = 12;
+      const gData = {
+        nodes: [...Array(NODES).keys()].map(i => ({
+          id: i,
+          group: Math.ceil(Math.random() * GROUPS)
+        })),
+        links: [...Array(NODES).keys()]
+          .filter(id => id)
+          .map(id => ({
+            source: id,
+            target: Math.round(Math.random() * (id-1))
+          }))
+      };
+  
+      const Graph = new ForceGraph3D(document.getElementById('3d-graph'))
+          .nodeAutoColorBy('group')
+          .linkAutoColorBy(d => gData.nodes[d.source].group)
+          .linkOpacity(0.5)
+          .graphData(gData);
+    </script>
+  </body>
+
+  <!-- The d is just a variable name (short for "data"). The library follows a consistent pattern: if the method starts with node..., the d represents a node object. If it starts with link..., the d represents a link object. -->
+
+  <!-- this code is essentially color coordinating the nodes and lines based on randomly generated parameters -->

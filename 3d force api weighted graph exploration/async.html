@@ -1,0 +1,43 @@
+<head>
+    <style> body { margin: 0; } </style>
+  
+    <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+    <!--<script src="../../dist/3d-force-graph.js"></script>-->
+  </head>
+  
+  <body>
+    <div id="3d-graph"></div>
+  
+    <script>
+      const Graph = new ForceGraph3D(document.getElementById('3d-graph'))
+          .jsonUrl('https://raw.githubusercontent.com/vasturiano/3d-force-graph/master/example/datasets/miserables.json')
+          .nodeLabel('id')
+          .nodeAutoColorBy('group');
+    </script>
+  </body>
+
+
+
+  <!-- we define the node customizations in the storage object, be it an array of objects like in the basic example or a json file like async example. and then to have those customizations reflected in the render we need to call the Node object accessor functions when creating the graph object 
+
+
+
+json example:
+
+nodes: [
+  { id: "Alice", group: 1, size: 5, color: "#ff0000", label: "Alice (Leader)" },
+  { id: "Bob", group: 2, size: 3, color: "#00ff00", label: "Bob" }
+]
+
+ "links": [
+    {"source": "Napoleon", "target": "Myriel", "value": 1},
+    {"source": "Mlle.Baptistine", "target": "Myriel", "value": 8},
+    {"source": "Mme.Magloire", "target": "Myriel", "value": 10},
+    {"source": "Mme.Magloire", "target": "Mlle.Baptistine", "value": 6},
+    {"source": "CountessdeLo", "target": "Myriel", "value": 1},
+    {"source": "Geborand", "target": "Myriel", "value": 1},
+    {"source": "Champtercier", "target": "Myriel", "value": 1},
+    {"source": "Cravatte", "target": "Myriel", "value": 1},
+    ]
+
+-->

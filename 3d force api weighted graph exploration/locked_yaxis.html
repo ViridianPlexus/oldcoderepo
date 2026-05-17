@@ -1,0 +1,19 @@
+<head>
+  <style> body { margin: 0; } </style>
+
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+  <!--<script src="../../dist/3d-force-graph.js"></script>-->
+</head>
+
+<body>
+<div id="3d-graph"></div>
+
+<script>
+  const Graph = new ForceGraph3D(document.getElementById('3d-graph'), { controlType: 'orbit' })
+    .jsonUrl('https://vasturiano.github.io/3d-force-graph/example/datasets/miserables.json')
+    .nodeLabel('id')
+    .nodeAutoColorBy('group');
+</script>
+</body>
+
+<!-- with this code, it differs from ordinary as you cant keep rotating vertically until the web is upside down -->

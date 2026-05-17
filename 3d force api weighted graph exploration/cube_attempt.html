@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Cube Generator</title>
+    <style>
+        body { margin: 0; font-family: sans-serif; }
+        #controls { position: absolute; top: 10px; left: 10px; z-index: 10; }
+        button { padding: 10px; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #555; }
+    </style>
+    <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
+<body>
+    <div id="controls">
+        <button id="makeCube">Generate New 3D Cube</button>
+    </div>
+    <div id="3d-graph"></div>
+
+    <script>
+
+        function create_nodes(shape){
+
+            if(shape=='cube'){
+                //create the appropriate number of nodes designator 
+                let n = 8;
+                //create the container array
+                let nodes = [];
+                //assign appropriate ids to each
+                for (let i = 0; i <= 7; i++) {
+                nodes.push({ id: i }); // Add a new object { id: 0 }, then { id: 1 }, etc.
+                }
+
+            }
+
+            return nodes;
+
+        }
+
+
+        function cube_face_link_creator(){
+
+            const links = [
+                // Top face
+                { source: 1, target: 2 }, { source: 2, target: 3 }, { source: 3, target: 4 }, { source: 4, target: 1 },
+                // Bottom face
+                { source: 5, target: 6 }, { source: 6, target: 7 }, { source: 7, target: 8 }, { source: 8, target: 5 },
+                // Vertical pillars
+                { source: 1, target: 5 }, { source: 2, target: 6 }, { source: 3, target: 7 }, { source: 4, target: 8 }
+            ];
+
+        }
+
+        function create_connections(node_container, shape){
+
+            let links = [];
+            //given the shape, we should be able to stitch the nodes together appropriately 
+            //so we just need the shape and the node container object
+            //and regardless of what the node individual id's are we should be able to stitch them appropriately
+            //start with the first node and proceed from there
+
+            if(shape =='cube'){
+
+            }
+
+        }
+
+
+
+        function runner(){
+
+        }
+
+
+
+        const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
+            .nodeColor(() => '#00ffff')
+            .linkColor(() => '#ffffff')
+            .linkWidth(2);
+
+        document.getElementById('makeCube').addEventListener('click', () => {
+            // Define the 8 vertices of a cube
+            const nodes = [
+                { id: 1, name: 'Top-Front-Left' },  { id: 2, name: 'Top-Front-Right' },
+                { id: 3, name: 'Top-Back-Right' },  { id: 4, name: 'Top-Back-Left' },
+                { id: 5, name: 'Bottom-Front-Left' },{ id: 6, name: 'Bottom-Front-Right' },
+                { id: 7, name: 'Bottom-Back-Right' },{ id: 8, name: 'Bottom-Back-Left' }
+            ];
+
+            // Define the 12 edges (links) connecting the vertices
+            const links = [
+                // Top face
+                { source: 1, target: 2 }, { source: 2, target: 3 }, { source: 3, target: 4 }, { source: 4, target: 1 },
+                // Bottom face
+                { source: 5, target: 6 }, { source: 6, target: 7 }, { source: 7, target: 8 }, { source: 8, target: 5 },
+                // Vertical pillars
+                { source: 1, target: 5 }, { source: 2, target: 6 }, { source: 3, target: 7 }, { source: 4, target: 8 }
+            ];
+
+            Graph.graphData({ nodes, links });
+
+            // Adjust physics to make the cube "stiffer"
+            Graph.d3Force('link').distance(50);
+            Graph.d3Force('charge').strength(-100);
+        });
+    </script>
+</body>
+<!-- what we desire to do is create nodes programatically,
+
+    create a function that generates the nodes
+    send nodes to link generator
+
+-->

@@ -1,0 +1,22 @@
+<head>
+    <style> body { margin: 0; } </style>
+  
+    <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+    <!--<script src="../../dist/3d-force-graph.js"></script>-->
+  </head>
+  
+  <body>
+    <div id="3d-graph"></div>
+  
+    <script>
+      const Graph = new ForceGraph3D(document.getElementById('3d-graph'))
+          .jsonUrl('https://raw.githubusercontent.com/vasturiano/3d-force-graph/master/example/datasets/miserables.json')
+          .nodeLabel('id')
+          .nodeAutoColorBy('group')
+          .linkDirectionalParticles("value")
+          .linkDirectionalParticleSpeed(d => d.value * 0.001)
+          .linkDirectionalParticleColor(() => 'orange');
+    </script>
+  </body>
+
+//   <!-- moves particles between nodes, you can customize number of particles, speed, color etc -->
