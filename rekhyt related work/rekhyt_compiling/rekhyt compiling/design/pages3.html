@@ -1,0 +1,158 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <title>Equal Column Grid Layout</title>
+
+
+<style type="text/css" id="operaUserStyle"></style></head>
+<body>
+
+    <div class="wrapper collapsed_Down">
+        <div class="container-left " style="position: relative;">
+            <div id="word-container" class="content_Text" style="display: flex;
+                   width: 100%;
+                 
+                   max-width: 800px;
+                  
+            transition: transform 0.5s ease;">
+                
+            </div>
+            <div class="arrow left" id="prevArrow">&#10094;</div>
+            <div class="arrow right" id="nextArrow">&#10095;</div>
+        </div>
+        <div class="box-right-1 x" style="padding-bottom: 30px;">  
+            <!-- Tab buttons -->
+            <div class="tabs">
+                <button class="tabButton" onclick="showTab('tab1')">Tab 1</button>
+                <button class="tabButton" onclick="showTab('tab2')">Tab 2</button>
+                <button class="tabButton" onclick="showTab('tab3')">Tab 3</button>
+            </div>
+        
+            <!-- Tab content -->
+            <div id="tab1" class="tabContent active_1" style="max-height: 200px;" style="display: none;">
+                <div id="chatHistory">
+                    <p class="speechBubble assistant">Hello, how can I help you today? Press the start button to chat.</p>
+                </div>
+                <div class="chatbox">
+                    <input type="text" id="userInput" placeholder="Type your message..." />
+                    <button id="sendBtn">Send</button>
+                    <button id="chat_history">save chat history</button>
+                </div>
+            </div>
+        
+            <div id="tab2" class="tabContent active_1" style="display: none;">
+                <p>This is content for Tab 2. Press the back button to go to Tab 1.</p>
+            </div>
+        
+            <div id="tab3" class="tabContent active_1"  style="display: none;">
+                <p>This is content for Tab 3. You can switch back to the previous tabs using the buttons above.</p>
+            </div>
+        </div>
+        <div class="box-right-2 x">
+            <div style="display: flex;justify-content: center;align-items: center;gap: 10px;">
+                <button id="backwardBtn"  class="buttonsound">
+                    <i class="fa fa-step-backward" aria-hidden="true"></i>
+                </button>
+                <button id="playPauseBtn"  class="buttonsound">
+                    <i id="playPauseIcon" class="fa fa-play" aria-hidden="true"></i>
+                </button>
+                <button id="forwardBtn" class="buttonsound">
+                    <i class="fa fa-step-forward" aria-hidden="true"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="secret.js"></script>
+    <script>
+         const grids = document.querySelector(".wrapper");
+    
+   let state = false 
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowRight") {
+                grids.classList.add('collapsed');
+            }
+            else if (e.key === "ArrowLeft") {
+                grids.classList.remove('collapsed');
+            }
+            if (e.key === "ArrowUp" && grids.classList.contains('collapsed_up')) {
+                console.log("object")
+                grids.classList.remove('collapsed_up');
+                grids.classList.remove('collapsed_Down');
+                state = true
+                showTab_1(state,"tab1")
+              
+            }
+            else if (e.key === "ArrowUp") {
+                grids.classList.add('collapsed_Down');
+                    grids.classList.remove('collapsed_up');
+                    state = false
+                    showTab_1(state,"tab1")
+               
+            }
+            else if (e.key === "ArrowDown" && grids.classList.contains('collapsed_Down')) {
+                grids.classList.remove('collapsed_Down');
+                state = true
+                showTab_1(state,"tab1")
+               
+            }
+            else if (e.key === "ArrowDown") {
+                grids.classList.add('collapsed_up');
+                grids.classList.remove('collapsed_Down');
+                state = true
+                showTab_1(state,"tab1")
+                
+            }
+            
+           
+        });
+        function showTab_1(state,tabId) {
+            if(!state){
+              
+                document.querySelector(".tabContent").classList.add("active_1") 
+            }
+            else{
+                
+                document.querySelector(".tabContent").classList.remove("active_1") 
+            }
+        }
+
+        function showTab(tabId) {
+            const tabContents = document.getElementsByClassName("tabContent");
+            if(tabId == "tab1"){
+                tabContents[0].classList.toggle("active_1")
+                
+            }
+        if(tabId == "tab2"){
+                tabContents[1].classList.toggle("active_1")
+                
+            }
+        if(tabId == "tab3"){
+                tabContents[2].classList.toggle("active_1")
+                console.log(tabContents[0])
+            }
+    // Hide all tab content
+    
+    for (let i = 0; i < tabContents.length; i++) {
+        
+       
+            tabContents[i].style.display = "none";
+      
+    }
+
+    // Remove 'active' class from all buttons (optional, for button styling)
+    const tabButtons = document.getElementsByClassName("tabButton");
+    for (let i = 0; i < tabButtons.length; i++) {
+        tabButtons[i].classList.remove("active");
+    }
+
+    document.getElementById(tabId).style.display = "block";
+}
+
+    </script>
+
+<div></div></body></html>

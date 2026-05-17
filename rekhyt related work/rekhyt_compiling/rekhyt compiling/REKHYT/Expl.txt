@@ -1,0 +1,32 @@
+1. Canvas and 2D Context Setup
+The code retrieves the canvas (matrixCanvas) from the HTML document and its 2D context (ctx), which allows drawing on the canvas.
+It adjusts the canvas size to match the parent HTML container, dynamically adapting it to the screen size.
+2. Character Definition and Initial Setup
+It defines a list of characters containing only the letters from the string "REKHYT", which are displayed on the canvas.
+It calculates how many columns and rows of letters fit into the canvas based on the set font size (fontSize).
+3. Matrix and Change Timers
+A matrix (matrix) is created to store the characters displayed at each position on the canvas.
+Another matrix (changeTimers) is used to control how long each character stays before being changed.
+A third matrix (colorMatrix) keeps track of the color of each letter, allowing it to be modified when the word "REKHYT" is highlighted.
+4. Gradual Letter Updates
+The updateRandomLetters function randomly changes a small percentage of letters on the screen (about 5%) at random time intervals.
+This creates a gradual transition effect for the content displayed on the canvas.
+5. Searching and Highlighting 'REKHYT'
+The findAndMarkREKHYT function searches for the word "REKHYT" within the matrix of characters displayed on the canvas.
+If it finds the word, it highlights it in red and changes the color of the word "LIBRARY" (which appears in the middle row when the mouse is over the canvas) to red.
+It also plays a thunder sound whenever the word "REKHYT" is found.
+6. Displaying the Word 'LIBRARY'
+The word "LIBRARY" is displayed in the center of the canvas when the mouse is over the canvas area. The text is centered horizontally and appears in white by default.
+If the word "REKHYT" is found in the matrix, "LIBRARY" changes to red.
+7. Drawing Letters on the Canvas
+The draw function runs continuously in a loop, clearing the canvas and redrawing all the letters in their positions.
+Depending on whether the mouse is over the canvas, it displays the word "LIBRARY" in the center along with the rest of the characters.
+It then calls the functions to search for "REKHYT" and randomly update some letters.
+8. Canvas Initialization
+The initializeMatrix function initializes the matrix with random characters and sets the timers for when each letter should change.
+This ensures that the screen starts with visible letters immediately.
+9. Mouse Event Handling
+The mouseenter event detects when the mouse enters the canvas area, setting the showLibrary variable to true, causing "LIBRARY" to appear in the center.
+The mouseleave event detects when the mouse leaves the canvas, hiding "LIBRARY."
+10. Canvas Resizing
+If the window is resized, the canvas also adjusts, and the matrix of letters is reinitialized to fit the new size.

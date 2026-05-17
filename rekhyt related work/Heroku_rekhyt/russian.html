@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Russian Alphabet</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="cyrillic-container">
+        <!-- Russian Cyrillic alphabet letters -->
+        <span class="cyrillic-letter" data-letter="А">А</span>
+        <span class="cyrillic-letter" data-letter="Б">Б</span>
+        <span class="cyrillic-letter" data-letter="В">В</span>
+        <span class="cyrillic-letter" data-letter="Г">Г</span>
+        <span class="cyrillic-letter" data-letter="Д">Д</span>
+        <span class="cyrillic-letter" data-letter="Е">Е</span>
+        <span class="cyrillic-letter" data-letter="Ё">Ё</span>
+        <span class="cyrillic-letter" data-letter="Ж">Ж</span>
+        <span class="cyrillic-letter" data-letter="З">З</span>
+        <span class="cyrillic-letter" data-letter="И">И</span>
+        <span class="cyrillic-letter" data-letter="Й">Й</span>
+        <span class="cyrillic-letter" data-letter="К">К</span>
+        <span class="cyrillic-letter" data-letter="Л">Л</span>
+        <span class="cyrillic-letter" data-letter="М">М</span>
+        <span class="cyrillic-letter" data-letter="Н">Н</span>
+        <span class="cyrillic-letter" data-letter="О">О</span>
+        <span class="cyrillic-letter" data-letter="П">П</span>
+        <span class="cyrillic-letter" data-letter="Р">Р</span>
+        <span class="cyrillic-letter" data-letter="С">С</span>
+        <span class="cyrillic-letter" data-letter="Т">Т</span>
+        <span class="cyrillic-letter" data-letter="У">У</span>
+        <span class="cyrillic-letter" data-letter="Ф">Ф</span>
+        <span class="cyrillic-letter" data-letter="Х">Х</span>
+        <span class="cyrillic-letter" data-letter="Ц">Ц</span>
+        <span class="cyrillic-letter" data-letter="Ч">Ч</span>
+        <span class="cyrillic-letter" data-letter="Ш">Ш</span>
+        <span class="cyrillic-letter" data-letter="Щ">Щ</span>
+        <span class="cyrillic-letter" data-letter="Ъ">Ъ</span>
+        <span class="cyrillic-letter" data-letter="Ы">Ы</span>
+        <span class="cyrillic-letter" data-letter="Ь">Ь</span>
+        <span class="cyrillic-letter" data-letter="Э">Э</span>
+        <span class="cyrillic-letter" data-letter="Ю">Ю</span>
+        <span class="cyrillic-letter" data-letter="Я">Я</span>
+    </div>
+    <script>
+        // Placeholder for future audio functionality
+        document.querySelectorAll('.cyrillic-letter').forEach(letter => {
+            letter.addEventListener('click', () => {
+             
+                new Audio('audio/Russian_audios/' + letter.dataset.letter + '.mp3').play();
+            });
+        });
+    </script>
+</body>
+</html>

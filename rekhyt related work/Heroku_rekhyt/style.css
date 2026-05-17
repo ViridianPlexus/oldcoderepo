@@ -1,0 +1,47 @@
+body {
+    background: #2d014d;
+    color: #fff;
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+a {
+    text-decoration: none;
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 1rem;
+    transition: color 0.2s;
+}
+
+.russian-link {
+    color: #b30000; /* Blood red */
+}
+
+.arabic-link {
+    color: #00ff00; /* Bright green */
+}
+
+.cyrillic-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+}
+
+.cyrillic-letter {
+    font-size: 2.5rem;
+    margin: 0.3rem 0;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.cyrillic-letter:hover {
+    color: #ffb700;
+}

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Arabic Alphabet</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .arabic-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+        }
+        .arabic-letter {
+            font-size: 2.5rem;
+            margin: 0.3rem 0;
+            cursor: pointer;
+            transition: color 0.2s;
+            font-family: 'Amiri', serif; /* Looks nice for Arabic */
+        }
+        .arabic-letter:hover {
+            color: #ffb700;
+        }
+    </style>
+</head>
+<body>
+    <div class="arabic-container">
+        <span class="arabic-letter" data-letter="ا">ا</span>
+        <span class="arabic-letter" data-letter="ب">ب</span>
+        <span class="arabic-letter" data-letter="ت">ت</span>
+        <span class="arabic-letter" data-letter="ث">ث</span>
+        <span class="arabic-letter" data-letter="ج">ج</span>
+        <span class="arabic-letter" data-letter="ح">ح</span>
+        <span class="arabic-letter" data-letter="خ">خ</span>
+        <span class="arabic-letter" data-letter="د">د</span>
+        <span class="arabic-letter" data-letter="ذ">ذ</span>
+        <span class="arabic-letter" data-letter="ر">ر</span>
+        <span class="arabic-letter" data-letter="ز">ز</span>
+        <span class="arabic-letter" data-letter="س">س</span>
+        <span class="arabic-letter" data-letter="ش">ش</span>
+        <span class="arabic-letter" data-letter="ص">ص</span>
+        <span class="arabic-letter" data-letter="ض">ض</span>
+        <span class="arabic-letter" data-letter="ط">ط</span>
+        <span class="arabic-letter" data-letter="ظ">ظ</span>
+        <span class="arabic-letter" data-letter="ع">ع</span>
+        <span class="arabic-letter" data-letter="غ">غ</span>
+        <span class="arabic-letter" data-letter="ف">ف</span>
+        <span class="arabic-letter" data-letter="ق">ق</span>
+        <span class="arabic-letter" data-letter="ك">ك</span>
+        <span class="arabic-letter" data-letter="ل">ل</span>
+        <span class="arabic-letter" data-letter="م">م</span>
+        <span class="arabic-letter" data-letter="ن">ن</span>
+        <span class="arabic-letter" data-letter="ه">ه</span>
+        <span class="arabic-letter" data-letter="و">و</span>
+        <span class="arabic-letter" data-letter="ي">ي</span>
+    </div>
+    <script>
+        // Placeholder for future audio functionality
+        document.querySelectorAll('.arabic-letter').forEach(letter => {
+            letter.addEventListener('click', () => {
+                // alert('Audio for ' + letter.dataset.letter + ' will play here.');
+                // In the future, you can play audio like:
+                new Audio('audio/Arabic_audios/' + letter.dataset.letter + '.mp3').play();
+            });
+        });
+    </script>
+</body>
+</html>

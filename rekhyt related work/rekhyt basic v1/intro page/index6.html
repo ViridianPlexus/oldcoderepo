@@ -1,0 +1,319 @@
+<!-- open in browser to see preview of progress so far -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local File Reader</title>
+</head>
+<body>
+    <nav></nav>
+    
+<div class = "esoteric" >
+        <div class = "chars">         
+        </div>
+        <div class = "chars">
+        </div>
+        <div class = "chars">
+        </div>
+        <div class = "chars">
+        </div>
+        <div class = "chars">
+        </div>
+        <div class = "chars">
+        </div>
+        <div class = "chars">
+        </div>
+        <div class = "chars">
+        </div>
+        <div class = "chars">
+        </div>
+        <div class = "chars">
+        </div>
+        <div class = "chars">
+        </div>
+     
+    </div>
+    
+    <footer></footer>
+    
+    <script>
+    let counter = 0;  
+    variable_scale = 100;
+    const array = ['r', 'e', 'k', 'h', 'y', 't'];
+    const charsContainer = document.querySelectorAll('.chars');
+    let array2D = new Array(charsContainer.length);
+  
+ 
+    //time test start
+    let startTime = Date.now();
+    
+
+
+
+      //we obtain a random char from the above rekhyt array on line 41
+    //we create a html div element and assign that to a variable
+    //we assign the text content of that div the random letter from before
+    //we add a distinguising class to later obtain and manipulate the variable later
+    //we store this in the global array
+    //we finally add the variable inside the parent div elemnt
+    for (let u = 0; u < charsContainer.length; u++) {
+      array2D[u] = new Array(46);
+      for (let i = 0; i <= 46; i++) {
+        const randomIndex = Math.floor(Math.random() * array.length);
+        const randomElement = array[randomIndex];
+
+        const charDiv = document.createElement('div');
+        charDiv.textContent = randomElement;
+        charDiv.classList.add(`char${u}:${i}`);
+        array2D[u][i] = charDiv;
+
+        charsContainer[u].appendChild(charDiv);
+      }
+    }
+
+    //time test end
+    let endTime = Date.now();
+    //time comparison
+    let timeElapsed = endTime - startTime;
+    //time print
+    console.log(`Time elapsed: ${timeElapsed} milliseconds`);
+
+
+
+
+    //here i attempted the beginnings of some sort of depth first search,
+    //more details in the readme
+    // function EupcheckforK(array2D,row, col ){
+
+    //     if (col > 0 && array2D[row][col - 1] && array2D[row][col - 1].textContent === 'k' ) {
+    //         array2D[row][col - 1].style.color = "red";
+    //     }// check left
+    //     if (col <  array2D[0].length - 1 && array2D[row][col + 1] && array2D[row][col + 1].textContent === 'k' ) {
+    //         array2D[row][col + 1].style.color = "red";
+    //     }// check right
+    //     if (row > 0 && array2D[row - 1][col] && array2D[row - 1][col].textContent === 'k') {
+    //         array2D[row - 1][col].style.color = "red";
+    //     }// check above
+
+    // }
+    // function EdwncheckforK(array2D,row, col ){
+
+    //     if (col > 0 && array2D[row][col - 1] && array2D[row][col - 1].textContent === 'k' ) {
+    //         array2D[row][col - 1].style.color = "red";
+    //     }// check left
+    //     if (col <  array2D[0].length - 1 && array2D[row][col + 1] && array2D[row][col + 1].textContent === 'k' ) {
+    //         array2D[row][col + 1].style.color = "red";
+    //     }// check right
+    //     if (row <  array2D.length-1 && array2D[row + 1][col] && array2D[row + 1][col].textContent === 'k') {
+    //         array2D[row + 1][col].style.color = "red";
+    //     }// check below
+
+    // }
+    // function ElftcheckforK(array2D,row, col ){
+
+    //     if (col > 0 && array2D[row][col - 1] && array2D[row][col - 1].textContent === 'k' ) {
+    //         array2D[row][col - 1].style.color = "red";
+    //     }// check left
+    //     if (row > 0 && array2D[row-1][col] && array2D[row-1][col].textContent === 'k' ) {
+    //         array2D[row-1][col].style.color = "red";
+    //     }// check up
+    //     if (row <  array2D.length-1 && array2D[row + 1][col] && array2D[row + 1][col].textContent === 'k') {
+    //         array2D[row + 1][col].style.color = "red";
+    //     }// check below
+
+    // }
+    // function ErighcheckforK(array2D,row, col ){
+
+    //     if (col < array2D[0].length && array2D[row][col + 1] && array2D[row][col + 1].textContent === 'k' ) {
+    //         array2D[row][col + 1].style.color = "red";
+    //     }// check right
+    //     if (row > 0 && array2D[row-1][col] && array2D[row-1][col].textContent === 'k' ) {
+    //         array2D[row-1][col].style.color = "red";
+    //     }// check up
+    //     if (row <  array2D.length-1 && array2D[row + 1][col] && array2D[row + 1][col].textContent === 'k') {
+    //         array2D[row + 1][col].style.color = "red";
+    //     }// check below
+
+    // }
+    // function checkforE(array2D, row,col ){
+    //     const rows = array2D.length;
+    //   const cols = array2D[0].length;
+
+    //     if (row > 0 && array2D[row - 1][col] && array2D[row - 1][col].textContent === 'e') { // Check above
+    //           console.log("Found 'e' above 'r' at row:", row, "col:", col);
+    //         //   array2D[row - 1][col].style.color = "red";
+
+    //           EupcheckforK(array2D,(row - 1), col )
+    //         }
+    //         if (row < rows - 1 && array2D[row + 1][col] && array2D[row + 1][col].textContent === 'e') { // Check below
+    //           console.log("Found 'e' below 'r' at row:", row, "col:", col);
+    //         //   array2D[row + 1][col].style.color = "red";
+
+    //           EdwncheckforK(array2D,(row + 1), col)
+    //         }
+    //         if (col > 0 && array2D[row][col - 1] && array2D[row][col - 1].textContent === 'e') { // Check left
+    //           console.log("Found 'e' left of 'r' at row:", row, "col:", col);
+    //         //   array2D[row][col - 1].style.color = "red";
+
+    //           ElftcheckforK(array2D,row, (col-1))
+    //         }
+    //         if (col < cols - 1 && array2D[row][col + 1] && array2D[row][col + 1].textContent === 'e') { // Check right
+    //           console.log("Found 'e' right of 'r' at row:", row, "col:", col);
+    //         //   array2D[row][col + 1].style.color = "red";
+
+    //           ErighcheckforK(array2D,row, (col+1))
+    //         }
+    // } 
+    // function rekhytCheck(array2D,randomU,randomI ) {
+
+
+
+        
+    //   const rows = array2D.length;
+    //   const cols = array2D[0].length;
+
+
+    
+
+    //   for (let row = 0; row < rows; row++) {
+    //     for (let col = 0; col < cols; col++) {
+    //       if (array2D[row][col].textContent === 'r') {
+    //         // Check adjacent cells for 'e'
+    //         // array2D[row][col].style.color = "red";
+    //         checkforE(array2D, row, col)
+          
+    //       }
+    //     }
+    //   }
+
+
+    
+
+
+
+    // //   const sequence = ['r', 'e', 'k', 'h', 'y', 't'];
+    // //   const sequenceLength = sequence.length;
+    // //   const matrixRows = theArray2D.length;
+    // //   const matrixCols = theArray2D[0].length;
+
+    // //   console.log("we are here");
+
+    // //   for (let u = 0; u < matrixRows; u++) {
+    // //     for (let i = 0; i <= matrixCols - sequenceLength; i++) {
+    // //       // Logic for checking sequence
+    // //       // You can uncomment the check code when needed
+    // //     }
+    // //   }
+
+    // //   console.log("Sequence not found.");
+    // }
+    
+    
+    
+    // Purpose: This line declares a function called delay that takes one parameter, 
+    // ms, which represents milliseconds.
+    // Functionality: The function is designed to introduce a delay or pause in 
+    // code execution for a specified number of milliseconds.
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // The purpose of this function is to process and update a 
+    // 2D array over time, while pausing between updates.
+    async function processArray() {
+      do {
+
+        //we obtain a random x and y value
+        const randomU = Math.floor(Math.random() * array2D.length);
+        const randomI = Math.floor(Math.random() * array2D[randomU].length);
+
+        //we turn that randomy selected character grey
+        array2D[randomU][randomI].style.color = "#5A5A5A";
+
+        //we change the character
+        const randomIndex = Math.floor(Math.random() * array.length);
+        const randomElement = array[randomIndex];
+        array2D[randomU][randomI].textContent = randomElement;
+
+        //we turn the character white
+        array2D[randomU][randomI].style.color = "white";
+
+        //we increase the counter
+        counter++;
+
+        // rekhytCheck(array2D, randomU,randomI ) optional dfs implementation,
+        // change as you see necessary 
+
+        // Wait for 50 milliseconds before the next iteration
+        await delay(5);
+
+        //theoretically this runs continually, replacing every letter until we reach the same number
+        //of reppetiittions as the number of total chars in the matrix
+        //because length multiplied by width is the total number of characters
+        //however, if you notice, not every latter will necessarily be replaced at least once
+        //because characters are randomy selected, there may be some chars changed more than once
+        //and other chars never changed at all
+      } while (counter < ((array2D.length * array2D[0].length)*variable_scale));
+    }
+    // Measure the time of the async processArray
+    let startTime2 = Date.now();
+    processArray().then(() => {
+      let endTime2 = Date.now();
+      let timeElapsed2 = endTime2 - startTime2;
+      console.log(`Time elapsed for processArray: ${timeElapsed2} milliseconds`);
+    });    
+    </script>
+
+    <style>
+
+        body {
+            /* margin: 0; */
+            /* height: 100vh;  */
+            padding-top: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* background-color: #333; Optional: background color for the body */
+        }
+
+        .esoteric{
+       
+        width: 1100px;
+        height: 500px;
+        /* border: 2px solid #F5F5F5; */
+       
+        border-radius: 7px;
+        /* box-sizing: border-box; */
+        /* position: absolute; */
+        /* left: 0; */
+        background-color: #5A5A5A;
+
+        
+        
+        
+       
+        }
+
+        .chars{
+            display: flex;
+            /* justify-content: space-between; */
+            padding: 15px;
+            color: white;
+             z-index: 2;
+             /* gap: 10px; */
+             gap: 16px;
+             font-family: monospace;
+             
+            
+             
+        }
+    
+        
+
+
+    </style>
+</body>
+</html>
