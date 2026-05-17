@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cytoscape Dictionary Graph</title>
+  <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+  <style>
+    #cy { width: 100vw; height: 95vh; border: 1px solid #aaa; }
+  </style>
+</head>
+<body>
+  <div id="cy"></div>
+  <script>
+    fetch('cytoscape_words2.json')
+      .then(response => response.json())
+      .then(cyData => {
+        cytoscape({
+          container: document.getElementById('cy'),
+          elements: cyData.elements,
+          style: [
+            { selector: 'node', style: { 'label': 'data(label)' } },
+            { selector: 'edge[type=\"synonym\"]', style: { 'line-color': 'green', 'target-arrow-color': 'green' } },
+            { selector: 'edge[type=\"antonym\"]', style: { 'line-color': 'crimson', 'target-arrow-color': 'crimson' } }
+          ],
+          layout: { name: 'cose' }
+        });
+      });
+  </script>
+</body>
+</html>
