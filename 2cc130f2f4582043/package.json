@@ -1,0 +1,14 @@
+{
+  "name": "2cc130f2f4582043",
+  "main": "2cc130f2f4582043@174.js",
+  "version": "174.0.0",
+  "homepage": "https://observablehq.com/d/2cc130f2f4582043",
+  "author": {
+    "name": "testing nodes",
+    "url": "https://observablehq.com/@testing-nodes"
+  },
+  "type": "module",
+  "peerDependencies": {
+    "@observablehq/runtime": "4 - 5"
+  }
+}
