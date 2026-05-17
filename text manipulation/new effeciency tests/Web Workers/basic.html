@@ -1,0 +1,105 @@
+<head>
+    <style> body { margin: 0; } </style>
+    <!-- Removes default browser margin so the graph fills the full screen. -->
+  
+    <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+    <!--<script src="../../dist/3d-force-graph.js"></script>-->
+    <!-- loads the 3d force graph -->
+  </head>
+  
+  <body>
+    <div id="3d-graph"></div>
+    <!-- This is the DOM element where the 3D graph will be rendered. -->
+  
+    <script>
+      // Random tree
+      const N = 300;
+    //   number of nodes
+      const gData = {
+        nodes: [...Array(N).keys()].map(i => ({ id: i })),
+        links: [...Array(N).keys()]
+          .filter(id => id)
+          .map(id => ({
+            source: id,
+            target: Math.round(Math.random() * (id-1))
+          }))
+      };
+
+  
+      const Graph = new ForceGraph3D(document.getElementById('3d-graph'))
+          .graphData(gData);
+    </script>
+  </body>
+
+  <!-- //   nodes sections
+
+  //       Array(300)
+  // This creates an array with length 300, but it’s empty slots:
+  // .keys() returns an iterator that gives you the index numbers:
+  //in general “Create N numbers from 0 to N-1, and turn each number
+  //  into an object with an id property.”
+  
+  // Here’s the exact same thing written in a much less dense way:
+  
+  // const nodes = [];
+  
+  // for (let i = 0; i < N; i++) {
+  //   nodes.push({ id: i });
+  // }
+  
+  
+  // .filter() is a built-in JavaScript array method.
+  
+  // It takes a function as an argument.
+  
+  // For each element in the array, it keeps it only if the function returns true.
+  // id => id is a shorthand arrow function that just returns the value itself.
+  
+  // 0 is “falsy” in JavaScript (0, false, null, undefined are falsy)
+  
+  // Any other number (1,2,3…) is “truthy” 
+
+What does map do?
+
+.map() is also a built-in JavaScript array method
+
+It takes a function, applies it to every element, and returns a new array with the results.
+
+Example:
+
+[1, 2, 3].map(x => x * 2)
+// Result: [2, 4, 6]
+
+
+In your code:
+
+.map(id => ({ source: id, target: Math.round(Math.random() * (id - 1)) }))
+
+
+For each id, it creates a new object {source: ..., target: ...}
+
+Result = an array of link objects
+
+Example of one link object:
+
+{ source: 5, target: 2 }
+
+we ensure no cycles!
+
+because of this : id - 1)
+
+Cycle: A loop in a graph, like A → B → C → A
+
+Here, every node only connects backward to a smaller node:
+
+Node 5 can only connect to 0–4
+
+Node 100 can only connect to 0–99
+
+So it’s impossible for links to loop back to a higher-numbered node
+
+✅ Result: no cycles, we always have a tree
+
+-->
+
+

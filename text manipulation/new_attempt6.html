@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style> body { margin: 0; background: #000; overflow: hidden; } </style>
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
+<body>
+  <div id="3d-graph"></div>
+
+  <script type="module">
+    import SpriteText from "https://esm.sh/three-spritetext";
+
+    async function init() {
+      // 1. FETCH THE TEXT
+      // Ensure zinn.txt is in the same folder as this HTML file
+      const response = await fetch('./zinn.txt');
+      const fullText = await response.text();
+
+      // 2. PROCESS DATA
+      // Let's take a chunk (e.g., first 20,000 chars) to keep it fast
+      const processedText = fullText.slice(0, 40000);
+      const gData = generateGraphData(processedText);
+
+      // 3. RENDER THE GRAPH
+      const Graph = ForceGraph3D({ controlType: 'fly' })(document.getElementById('3d-graph'))
+        .graphData(gData)
+        .nodeThreeObject(node => {
+          const sprite = new SpriteText(node.id);
+          sprite.color = '#00ffcc';
+          sprite.textHeight = 4;
+          return sprite;
+        })
+        .nodeThreeObjectExtend(true)
+        .linkDirectionalArrowLength(3)
+        .linkDirectionalArrowRelPos(1)
+        .linkCurvature(0.2)
+        .onNodeClick(node => {
+          // Aim at node from outside it
+          const distance = 150;
+          const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+
+          const newPos = node.x || node.y || node.z
+            ? { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }
+            : { x: 0, y: 0, z: distance }; // special case if node is in (0,0,0)
+
+          Graph.cameraPosition(
+            newPos, // new position
+            node, // lookAt ({ x, y, z })
+            3000  // ms transition duration
+          );
+        });
+
+      // Give nodes some extra breathing room
+      Graph.d3Force('charge').strength(-150);
+    }
+
+    function generateGraphData(text) {
+      const nodes = [];
+      const links = [];
+      const seenWords = new Map();
+// 1. STOP WORDS: Add common words here you want to ignore
+  const stopWords = new Set(['the', 'and', 'of', 'to', 'in', 'a', 'is', 'it', 'that', 'was', 'as', 'for', 'with', 'on', 'be', 'by', 'had', 'his', 'were', 'they', 'them', 'but', 'their', 'not', 'from']);
+      // Basic cleaning
+      const cleanText = text
+        .replace(/(\r?\n){2,}/g, '\n')
+        .replace(/([\.!\?,])\1+/g, '$1');
+
+      const sentences = cleanText.split(/(?<=[.!?])/g);
+
+      sentences.forEach(sentence => {
+        const trimmed = sentence.trim();
+        if (/[a-zA-Z0-9]/.test(trimmed)) {
+          const words = trimmed.split(/\s+/)
+            .filter(word => word.length > 2) // Filter out "a", "it", "of" etc.
+            .map(w => w.toLowerCase().replace(/[^\w]/g, ''))
+            // NEW: Filter out the stop words
+            .filter(word => !stopWords.has(word));
+
+          for (let i = 0; i < words.length; i++) {
+            const currentWord = words[i];
+            const nextWord = words[i + 1];
+
+            if (!seenWords.has(currentWord)) {
+                // NEW: We added a 'size' property to track frequency
+             const newNode = { id: currentWord, group: 1, size: 1 };
+              nodes.push(newNode);
+              seenWords.set(currentWord, newNode);
+            }else {
+          // If word exists, increase its size property
+          seenWords.get(currentWord).size += 1;
+        }
+
+            if (nextWord) {
+              links.push({ source: currentWord, target: nextWord });
+            }
+          }
+        }
+      });
+      return { nodes, links };
+    }
+
+    // Run the script
+    init();
+  </script>
+</body>
+</html>

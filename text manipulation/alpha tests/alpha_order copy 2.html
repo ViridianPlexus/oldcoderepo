@@ -1,0 +1,252 @@
+ok this is the current code, implement your concept:
+
+<!-- dans cet version on utilisent labels HTML au lieu de sprite  -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+    
+    /* Shared control styling */
+    .control-group {
+      position: absolute;
+      bottom: 20px;
+      display: grid;
+      gap: 10px;
+      z-index: 999;
+    }
+
+    /* Left side (WASD) */
+    #wasd-controls {
+      left: 20px;
+      grid-template-areas: 
+        ". w ."
+        "a s d";
+    }
+
+    /* Right side (Arrows) */
+    #arrow-controls {
+      right: 20px;
+      grid-template-areas: 
+        ". up ."
+        "left down right";
+    }
+
+    .key {
+      width: 45px;
+      height: 45px;
+      background: rgba(255, 165, 0, 0.15);
+      border: 1px solid orange;
+      color: orange;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      user-select: none;
+      font-weight: bold;
+      font-size: 14px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .key:active {
+      background: rgba(255, 165, 0, 0.5);
+    }
+
+    /* Mapping areas */
+    #w { grid-area: w; } #a { grid-area: a; } #s { grid-area: s; } #d { grid-area: d; }
+    #up { grid-area: up; } #left { grid-area: left; } #down { grid-area: down; } #right { grid-area: right; }
+
+
+    #perf-monitor {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #00ff00;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 20px;
+    border: 1px solid #444;
+    pointer-events: none;
+    z-index: 1000;
+}
+  </style>
+</head>
+
+<body>
+  <div id="perf-monitor">
+    <div>GPU draw calls: <span id="draw-calls">0</span></div>
+    <div>GPU memory: <span id="gpu-mem">0</span> MB</div>
+    <div>Geometries: <span id="geo-count">0</span></div>
+</div>
+  <div id="wasd-controls" class="control-group">
+    <div class="key" id="w">W</div>
+    <div class="key" id="a">A</div>
+    <div class="key" id="s">S</div>
+    <div class="key" id="d">D</div>
+  </div>
+
+  <div id="arrow-controls" class="control-group">
+    <div class="key" id="up">▲</div>
+    <div class="key" id="left">◀</div>
+    <div class="key" id="down">▼</div>
+    <div class="key" id="right">▶</div>
+  </div>
+
+  <div id="3d-graph"></div>
+
+<script type="module">
+  import ForceGraph3D from 'https://esm.sh/3d-force-graph';
+import { CSS2DRenderer, CSS2DObject } from 'https://esm.sh/three/examples/jsm/renderers/CSS2DRenderer.js';
+
+  // Simulation engine
+  function simulateKey(code, type) {
+    const event = new KeyboardEvent(type, {
+      code: code,
+      key: code,
+      bubbles: true
+    });
+    window.dispatchEvent(event);
+  }
+
+  // Key mappings
+  const keyMap = {
+    'w': 'KeyW', 'a': 'KeyA', 's': 'KeyS', 'd': 'KeyD',
+    'up': 'ArrowUp', 'down': 'ArrowDown', 'left': 'ArrowLeft', 'right': 'ArrowRight'
+  };
+  
+  Object.keys(keyMap).forEach(id => {
+    const el = document.getElementById(id);
+    ['mousedown', 'touchstart'].forEach(evt => 
+      el.addEventListener(evt, (e) => { e.preventDefault(); simulateKey(keyMap[id], 'keydown'); })
+    );
+    ['mouseup', 'touchend', 'touchcancel'].forEach(evt => 
+      el.addEventListener(evt, (e) => { e.preventDefault(); simulateKey(keyMap[id], 'keyup'); })
+    );
+  });
+
+  async function loadData() {
+    try {
+      const response = await fetch("transformed_dictionary.txt");
+      const text = await response.text();
+      const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+      const nodes = [];
+      const links = [];
+
+      lines.forEach((line) => {
+        const match = line.match(/^([^\s]+)\s+(.*)$/);
+        if (match) {
+          const word = match[1].replace(/[:.,]/g, "");
+          const definition = match[2].trim();
+          nodes.push({ id: word, definition: definition });
+          if (nodes.length > 1) {
+            links.push({ source: nodes[nodes.length - 2].id, target: word });
+          }
+        }
+      });
+      return { nodes, links };
+    } catch (err) {
+      console.error("Fetch error:", err);
+      return { nodes: [], links: [] };
+    }
+  }
+
+  loadData().then(gData => {
+    if (gData.nodes.length === 0) return;
+
+    const Graph = ForceGraph3D({ controlType: 'fly' })(document.getElementById("3d-graph"));
+
+      const labelRenderer = new CSS2DRenderer();
+      labelRenderer.setSize(window.innerWidth, window.innerHeight);
+      labelRenderer.domElement.style.position = 'absolute';
+      labelRenderer.domElement.style.top = '0';
+      labelRenderer.domElement.style.pointerEvents = 'none';
+      
+      document.getElementById('3d-graph').appendChild(labelRenderer.domElement);
+     
+      Graph
+  .graphData(gData)
+  .nodeThreeObject(node => {
+    const div = document.createElement('div');
+    div.textContent = node.id;
+
+    div.style.color = 'orange';
+    div.style.fontSize = '14px';
+    div.style.padding = '2px 6px';
+    div.style.background = 'rgba(0,0,0,0.4)';
+    div.style.borderRadius = '4px';
+    div.style.whiteSpace = 'nowrap';
+
+    return new CSS2DObject(div);
+  const label = new CSS2DObject(div);
+  return label;
+})
+     .nodeThreeObjectExtend(true)
+  .nodeLabel(node => `<b>${node.id}</b>: ${node.definition}`)
+  .onNodeClick(node => {
+
+    const distance = 200;
+    const camera = Graph.camera();
+    const cameraPos = camera.position;
+
+    const dirX = node.x - cameraPos.x;
+    const dirY = node.y - cameraPos.y;
+    const dirZ = node.z - cameraPos.z;
+
+    const length = Math.hypot(dirX, dirY, dirZ);
+    const ratio = distance / length;
+
+    const newPos = {
+      x: node.x - dirX * ratio,
+      y: node.y - dirY * ratio,
+      z: node.z - dirZ * ratio
+    };
+
+    Graph.cameraPosition(newPos, node, 1500);
+  });
+  
+  Graph.d3Force("charge").strength(-200);
+
+  // 1. Get references to UI elements
+    const drawCallsEl = document.getElementById('draw-calls');
+    const memoryEl = document.getElementById('gpu-mem');
+    const geoEl = document.getElementById('geo-count');
+
+    // 2. Access the Three.js Renderer
+    const renderer = Graph.renderer();
+
+    // 3. Create an update loop
+    function updateMetrics() {
+        const info = renderer.info;
+        
+        // Update the UI
+        drawCallsEl.innerText = info.render.calls;
+        geoEl.innerText = info.memory.geometries;
+        
+        // Memory calculation (Approximate)
+        // Note: info.memory provides counts. To get MB like the example,
+        // you'd typically track your buffer sizes manually or use a specific extension.
+        // For a quick estimate based on the example:
+        const memMB = (info.memory.geometries * 0.5).toFixed(2); // Dummy multiplier for demo
+        memoryEl.innerText = memMB;
+
+        requestAnimationFrame(updateMetrics);
+      }
+
+    updateMetrics();
+
+  });
+
+  Graph.onEngineTick(() => {
+  labelRenderer.render(Graph.scene(), Graph.camera());
+});
+
+window.addEventListener('resize', () => {
+  labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

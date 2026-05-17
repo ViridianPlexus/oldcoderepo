@@ -1,0 +1,367 @@
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three/build/three.module.js",
+
+    "three/examples/jsm/controls/OrbitControls.js":
+      "https://cdn.jsdelivr.net/npm/three/examples/jsm/controls/OrbitControls.js",
+
+    "three/examples/jsm/renderers/CSS2DRenderer.js":
+      "https://cdn.jsdelivr.net/npm/three/examples/jsm/renderers/CSS2DRenderer.js",
+
+    "three/examples/jsm/misc/GPUComputationRenderer.js":
+      "https://cdn.jsdelivr.net/npm/three/examples/jsm/misc/GPUComputationRenderer.js",
+
+    "@jonobr1/force-directed-graph":
+      "https://cdn.jsdelivr.net/npm/@jonobr1/force-directed-graph/build/fdg.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { ForceDirectedGraph } from '@jonobr1/force-directed-graph';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera();
+
+// renderer for labels
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0px';
+labelRenderer.domElement.style.pointerEvents = 'none'; // allow mouse through
+document.body.appendChild(labelRenderer.domElement);
+
+// <!-- orbit controls -->
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;   // smooth motion
+controls.dampingFactor = 0.08;
+
+controls.enablePan = true;       // click + drag move
+controls.enableZoom = true;      // scroll zoom
+controls.rotateSpeed = 0.6;
+
+// <!-- scroll wheel script -->
+
+
+  const zoomSpeed = 50;
+
+document.addEventListener('wheel', (event) => {
+  const delta = Math.sign(event.deltaY);
+
+  // move forward/backward based on scroll
+  camera.translateZ(delta * zoomSpeed);
+  });
+
+camera.position.z = 500;
+
+// Generate some fake data
+const amount = 1008;
+const data = {
+  nodes: [],  // Required, each element should be an object
+  links: []   // Required, each element should be an object
+              // with source and target properties that are
+              // indices of their connecting nodes
+};
+
+for (let i = 0; i < amount; i++) {
+
+  const node = { id: i, color: 'black' };
+
+  data.nodes.push(node);
+
+  if (i > 0) {
+    data.links.push({ target: Math.floor(Math.random() * i), source: i });
+  } else {
+    node.isStatic = true;
+    node.x = 50;
+    node.y = 0;
+    node.z = 0;
+    node.color = 'red';
+  }
+
+}
+
+const fdg = new ForceDirectedGraph(renderer, data);
+// fdg.linkColor.setRGB(145, 75, 231);
+
+fdg.gravity = 0.05;
+fdg.decay = 1;
+fdg.maxSpeed = 10;
+fdg.timeStep = 1;
+fdg.repulsion = -0.3;
+fdg.nodeScale = 8;
+fdg.springLength = 2;   // custom property (if supported by lib)
+fdg.stiffness = 0.1;    // custom property (if supported by lib)
+
+
+fdg.sizeAttenuation = true;
+
+// links
+fdg.linksVisible = true;
+fdg.linkColor.set('#914be7');
+
+// points (nodes)
+fdg.pointsVisible = true;
+fdg.pointColor.set('#128745');
+
+const nodeRadius = document.getElementById('nodeRadius');
+const sizeAttenuation = document.getElementById('sizeAttenuation');
+// const damping = document.getElementById('damping');
+const springLength = document.getElementById('springLength');
+const gravity = document.getElementById('gravity');
+const stiffness = document.getElementById('stiffness');
+
+const labels = data.nodes.map(node => {
+  const div = document.createElement('div');
+  div.textContent = node.id; // change to node.name if needed
+  div.style.fontSize = '10px';
+  div.style.color = 'black';
+  div.style.whiteSpace = 'nowrap';
+
+  const label = new CSS2DObject(div);
+  scene.add(label);
+
+  return label;
+});
+
+
+// node radius
+nodeRadius.addEventListener('input', (e) => {
+  fdg.nodeScale = parseFloat(e.target.value);
+});
+
+// size attenuation (if your renderer supports it)
+sizeAttenuation.addEventListener('change', (e) => {
+  fdg.sizeAttenuation = e.target.checked;
+});
+
+// // damping
+// damping.addEventListener('input', (e) => {
+//   fdg.decay = parseFloat(e.target.value);
+// });
+
+// spring length
+springLength.addEventListener('input', (e) => {
+  fdg.springLength = parseFloat(e.target.value);
+});
+
+// gravity
+gravity.addEventListener('input', (e) => {
+  fdg.gravity = parseFloat(e.target.value);
+});
+
+// stiffness
+stiffness.addEventListener('input', (e) => {
+  fdg.stiffness = parseFloat(e.target.value);
+});
+
+
+
+scene.add(fdg);
+
+setup();
+
+function setup() {
+  renderer.setClearColor('#fff');
+  document.body.appendChild(renderer.domElement);
+  window.addEventListener('resize', resize, false);
+  resize();
+  renderer.setAnimationLoop(render);
+}
+
+function resize() {
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  renderer.setSize(width, height);
+  labelRenderer.setSize(width, height); // 👈 add this
+
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+
+}
+
+function render(elapsed) {
+  fdg.update(elapsed);
+   controls.update(); 
+    // update label positions
+ data.nodes.forEach((node, i) => {
+  labels[i].position.set(
+    node.x,
+    node.y + 5, // offset above node
+    node.z
+  );
+});
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera); // 👈 IMPORTANT
+}
+</script>
+
+<script>
+  document.querySelectorAll('.gui-folder-title').forEach(title => {
+  title.addEventListener('click', () => {
+    const content = title.nextElementSibling;
+    content.style.display =
+      content.style.display === 'none' ? 'block' : 'none';
+  });
+});
+
+
+
+
+
+</script>
+
+
+
+<style>
+  .gui {
+  position: fixed;
+  top: 0;
+  right: 15px;
+  width: 245px;
+  background: #1f1f1f;
+  color: #ebebeb;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+  font-size: 11px;
+  z-index: 1000;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gui-title {
+  background: #111;
+  padding: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.gui-content {
+  padding: 6px;
+}
+
+.gui-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 0;
+}
+
+.gui-row label {
+  width: 45%;
+}
+
+.gui-row input[type="range"] {
+  width: 50%;
+}
+
+.gui-row input[type="checkbox"] {
+  transform: scale(0.9);
+}
+
+.gui-row select {
+  width: 50%;
+  background: #424242;
+  color: white;
+  border: none;
+}
+
+.gui-folder {
+  margin-top: 8px;
+  border-top: 1px solid #333;
+}
+
+.gui-folder-title {
+  padding: 6px;
+  background: #111;
+  cursor: pointer;
+}
+
+.gui-folder-content {
+  padding: 4px;
+}
+</style>
+
+
+
+<div class="gui">
+  <div class="gui-title">Controls</div>
+
+  <div class="gui-content">
+    
+    <!-- Slider -->
+   
+    <div class="gui-row">
+      <label>node radius</label>
+      <input id="nodeRadius" type="range" min="0.1" max="10" step="0.1" value="1">
+    </div>
+
+    <div class="gui-row">
+      <label>size attenuation</label>
+      <input id="sizeAttenuation" type="checkbox" checked>
+    </div>
+
+    <!-- <div class="gui-row">
+      <label>damping</label>
+      <input id="damping" type="range" min="0" max="1" step="0.01" value="0.7">
+    </div> -->
+
+    <div class="gui-row">
+      <label>spring length</label>
+      <input id="springLength" type="range" min="0.1" max="10" step="0.1" value="2">
+    </div>
+
+    <div class="gui-row">
+      <label>gravity</label>
+      <input id="gravity" type="range" min="0" max="2" step="0.01" value="0.5">
+    </div>
+
+    <div class="gui-row">
+      <label>stiffness</label>
+      <input id="stiffness" type="range" min="0" max="1" step="0.01" value="0.1">
+    </div>
+    
+
+  
+
+    <!-- <div class="gui-row">
+      <label>damping</label>
+      <input type="range" min="0" max="1" step="0.01" value="0.7">
+    </div> -->
+
+   
+
+ 
+
+    <!-- Checkbox -->
+    
+    <!-- Dropdown -->
+   
+
+    <!-- Folder -->
+    <!-- <div class="gui-folder">
+      <div class="gui-folder-title">Points</div>
+      <div class="gui-folder-content">
+
+        <div class="gui-row">
+          <label>visible</label>
+          <input type="checkbox" checked>
+        </div>
+
+        <div class="gui-row">
+          <label>color</label>
+          <input type="color" value="#4c4c4c">
+        </div>
+
+      </div>
+    </div> -->
+
+  </div>
+</div>

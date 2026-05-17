@@ -1,0 +1,76 @@
+<head>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #fileInput {
+      position: absolute;
+      z-index: 10;
+      margin: 10px;
+    }
+  </style>
+
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
+
+<body>
+  <input type="file" id="fileInput" accept=".txt">
+  <div id="3d-graph"></div>
+
+  <script type="module">
+    import SpriteText from "https://esm.sh/three-spritetext";
+
+    const Graph = new ForceGraph3D(document.getElementById('3d-graph'))
+      .nodeLabel(node => `${node.id}\n\n${node.definition}`)
+      .nodeThreeObject(node => {
+        const sprite = new SpriteText(node.id);
+        sprite.material.depthWrite = false;
+        sprite.color = "white";
+        sprite.textHeight = 8;
+        sprite.center.y = -0.6;
+        return sprite;
+      })
+      .nodeThreeObjectExtend(true);
+
+    Graph.d3Force('charge').strength(-150);
+
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const text = e.target.result;
+
+        const lines = text.split("\n").filter(l => l.trim() !== "");
+
+        const nodes = [];
+        const links = [];
+
+        lines.forEach((line, index) => {
+          const match = line.match(/^([A-Z]+)\s+(.*)$/);
+
+          if (match) {
+            const word = match[1];
+            const definition = match[2].trim();
+
+            nodes.push({
+              id: word,
+              definition: definition
+            });
+
+            if (index > 0) {
+              links.push({
+                source: nodes[index - 1].id,
+                target: word
+              });
+            }
+          }
+        });
+
+        Graph.graphData({ nodes, links });
+      };
+
+      reader.readAsText(file);
+    });
+  </script>
+</body>

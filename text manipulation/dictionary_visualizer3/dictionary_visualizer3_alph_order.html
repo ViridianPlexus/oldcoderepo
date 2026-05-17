@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; }
+  </style>
+</head>
+
+<body>
+  <div id="3d-graph"></div>
+
+<script type="module">
+  import ForceGraph3D from 'https://esm.sh/3d-force-graph';
+  import SpriteText from 'https://esm.sh/three-spritetext';
+
+  async function loadData() {
+    try {
+      const response = await fetch("transformed_dictionary.txt");
+      const text = await response.text();
+      
+      // Split by lines and remove empty ones
+      const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+
+      const nodes = [];
+      const links = [];
+
+      lines.forEach((line) => {
+        // NEW FORGIVING REGEX:
+        // Matches the first "clump" of characters as the word, 
+        // and everything else as the definition.
+        const match = line.match(/^([^\s]+)\s+(.*)$/);
+
+        if (match) {
+          const word = match[1].replace(/[:.,]/g, ""); // Clean punctuation from word
+          const definition = match[2].trim();
+
+          nodes.push({ id: word, definition: definition });
+
+          if (nodes.length > 1) {
+            links.push({
+              source: nodes[nodes.length - 2].id,
+              target: word
+            });
+          }
+        }
+      });
+
+      console.log("Nodes parsed:", nodes.length); // Should be > 0 now!
+      return { nodes, links };
+    } catch (err) {
+      console.error("Fetch error:", err);
+      return { nodes: [], links: [] };
+    }
+  }
+
+  loadData().then(gData => {
+    if (gData.nodes.length === 0) {
+      alert("Error: No words found in excerpt.txt. Make sure each line has a word then a space.");
+      return;
+    }
+
+    const Graph = ForceGraph3D({ controlType: 'fly' })(document.getElementById("3d-graph"),)
+      .graphData(gData)
+      .nodeThreeObject(node => {
+        const sprite = new SpriteText(node.id);
+        sprite.color = "orange";
+        sprite.textHeight = 8;
+        return sprite;
+      })
+      .nodeThreeObjectExtend(true)
+      .nodeLabel(node => `<b>${node.id}</b>: ${node.definition}`);
+
+    Graph.d3Force("charge").strength(-200);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<head>
+  <style>
+    body { margin: 0; overflow: hidden; }
+  </style>
+
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
+
+<body>
+  <div id="3d-graph"></div>
+
+  <!-- 🔹 PASTE YOUR ENTIRE excerpt.txt CONTENT BELOW -->
+  <script id="glossary-data" type="text/plain">
+ABASE                   v. To lower in position, estimation, or the like; degrade.
+ABBESS                  n. The lady superior of a nunnery.
+ABBEY                   n. The group of buildings which collectively form the dwelling-place of a society of monks or nuns.
+ABBOT                   n. The superior of a community of monks.
+ABBREVIATE              v. To shorten so that a part stands for a whole.
+ABDICATE                v. To give up (royal power or the like).
+ABDOMEN                 n. In mammals, the visceral cavity between the diaphragm and the pelvic floor; the belly.
+ABDOMINAL               adj. Of, pertaining to, or situated on the abdomen.
+  </script>
+
+  <script type="module">
+    import SpriteText from "https://esm.sh/three-spritetext";
+
+    // Get embedded text
+    const rawText = document.getElementById("glossary-data").textContent;
+
+    const lines = rawText.split("\n").filter(l => l.trim() !== "");
+
+    const nodes = [];
+    const links = [];
+
+    lines.forEach((line, index) => {
+      const match = line.match(/^([A-Z]+)\s+(.*)$/);
+
+      if (match) {
+        const word = match[1];
+        const definition = match[2].trim();
+
+        nodes.push({
+          id: word,
+          definition: definition
+        });
+
+        if (index > 0) {
+          links.push({
+            source: nodes[index - 1].id,
+            target: word
+          });
+        }
+      }
+    });
+
+    const Graph = new ForceGraph3D(document.getElementById('3d-graph'))
+      .graphData({ nodes, links })
+      .nodeLabel(node => `${node.id}\n\n${node.definition}`)
+      .nodeThreeObject(node => {
+        const sprite = new SpriteText(node.id);
+        sprite.material.depthWrite = false;
+        sprite.color = "white";
+        sprite.textHeight = 8;
+        sprite.center.y = -0.6;
+        return sprite;
+      })
+      .nodeThreeObjectExtend(true);
+
+    Graph.d3Force('charge').strength(-150);
+  </script>
+</body>

@@ -1,0 +1,31 @@
+<!-- using 3d force api we seek to make nodes disappear and reappear given certain circumstances, 10 nodes, let there be a button that when pressed the nodes disappear, and when pressed again they reappear nodeVisibility([boolean, str or fn]) vanilla javascript -->
+
+<button id="toggleBtn">Toggle Nodes</button>
+<div id="3d-graph"></div>
+
+<script src="https://unpkg.com/3d-force-graph"></script>
+<script>
+  const Graph = ForceGraph3D()(document.getElementById('3d-graph'));
+
+  // Example graph with 10 nodes
+  const data = {
+    nodes: [...Array(10).keys()].map(i => ({ id: i })),
+    links: []
+  };
+
+  Graph.graphData(data);
+
+  // Visibility state
+  let visible = true;
+
+  // Apply visibility logic
+  Graph.nodeVisibility(() => visible);
+
+  // Button toggle
+  document.getElementById('toggleBtn').addEventListener('click', () => {
+    visible = !visible;
+
+    // Re-apply visibility function
+    Graph.nodeVisibility(() => visible);
+  });
+</script>

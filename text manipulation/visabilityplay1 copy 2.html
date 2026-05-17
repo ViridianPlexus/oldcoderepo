@@ -1,0 +1,84 @@
+<!-- ok well then using this code as a base and adding controltype fly make it so that nodes disappear when near the camera
+
+change this code, make a node become invisible if the user clicks on it 
+
+<div id="3d-graph"></div>
+
+<script src="https://unpkg.com/3d-force-graph"></script>
+<script>
+  const Graph = ForceGraph3D()(document.getElementById('3d-graph'));
+
+  // Create 10 nodes
+  const data = {
+    nodes: [...Array(10).keys()].map(i => ({
+      id: i,
+      hidden: false
+    })),
+    links: []
+  };
+
+  Graph.graphData(data);
+
+  // Visibility rule
+  Graph.nodeVisibility(node => !node.hidden);
+
+  // Click handler: hide node
+  Graph.onNodeClick(node => {
+    node.hidden = true;
+
+    // Re-apply visibility
+    Graph.nodeVisibility(Graph.nodeVisibility());
+    // or simply:
+    Graph.refresh();
+  });
+</script> -->
+
+<div id="3d-graph"></div>
+
+<script src="https://unpkg.com/3d-force-graph"></script>
+<script>
+  const Graph = ForceGraph3D({controlType: 'fly' })(document.getElementById('3d-graph'))
+     // ✅ enable fly controls
+
+  // Create 10 nodes
+  const data = {
+    nodes: [...Array(10).keys()].map(i => ({
+      id: i,
+      hidden: false
+    })),
+    links: []
+  };
+
+  Graph.graphData(data);
+
+  const threshold = 50; // distance where nodes disappear
+
+  // Combined visibility rule
+  Graph.nodeVisibility(node => {
+    const camera = Graph.camera();
+
+    const dx = node.x - camera.position.x;
+    const dy = node.y - camera.position.y;
+    const dz = node.z - camera.position.z;
+
+    const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    console.log()
+
+    // hide if clicked OR too close to camera
+    return !node.hidden && distance > threshold;
+  });
+
+  // Click handler: hide node permanently
+  Graph.onNodeClick(node => {
+    node.hidden = true;
+    Graph.refresh();
+  });
+
+  // Continuously update as camera moves
+  function updateVisibility() {
+    Graph.refresh(); // re-evaluate nodeVisibility
+    requestAnimationFrame(updateVisibility);
+  }
+
+  updateVisibility();
+</script>

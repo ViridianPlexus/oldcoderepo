@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style> body { margin: 0; background: #000; overflow: hidden; } </style>
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
+<body>
+  <div id="3d-graph"></div>
+
+  <script type="module">
+    import SpriteText from "https://esm.sh/three-spritetext";
+
+    async function init() {
+      // 1. FETCH THE TEXT
+      // Ensure zinn.txt is in the same folder as this HTML file
+      const response = await fetch('./zinn.txt');
+      const fullText = await response.text();
+
+      // 2. PROCESS DATA
+      // Let's take a chunk (e.g., first 20,000 chars) to keep it fast
+      const processedText = fullText.slice(0, 40000);
+      const gData = generateGraphData(processedText);
+
+      // 3. RENDER THE GRAPH
+      const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
+        .graphData(gData)
+        .nodeThreeObject(node => {
+          const sprite = new SpriteText(node.id);
+          sprite.color = '#00ffcc';
+          sprite.textHeight = 4;
+          return sprite;
+        })
+        .nodeThreeObjectExtend(true)
+        .linkDirectionalArrowLength(3)
+        .linkDirectionalArrowRelPos(1)
+        .linkCurvature(0.2);
+
+      // Give nodes some extra breathing room
+      Graph.d3Force('charge').strength(-150);
+    }
+
+    function generateGraphData(text) {
+      const nodes = [];
+      const links = [];
+      const seenWords = new Map();
+
+      // Basic cleaning
+      const cleanText = text
+        .replace(/(\r?\n){2,}/g, '\n')
+        .replace(/([\.!\?,])\1+/g, '$1');
+
+      const sentences = cleanText.split(/(?<=[.!?])/g);
+
+      sentences.forEach(sentence => {
+        const trimmed = sentence.trim();
+        if (/[a-zA-Z0-9]/.test(trimmed)) {
+          const words = trimmed.split(/\s+/)
+            .filter(word => word.length > 2) // Filter out "a", "it", "of" etc.
+            .map(w => w.toLowerCase().replace(/[^\w]/g, ''));
+
+          for (let i = 0; i < words.length; i++) {
+            const currentWord = words[i];
+            const nextWord = words[i + 1];
+
+            if (!seenWords.has(currentWord)) {
+              const newNode = { id: currentWord, group: 1 };
+              nodes.push(newNode);
+              seenWords.set(currentWord, newNode);
+            }
+
+            if (nextWord) {
+              links.push({ source: currentWord, target: nextWord });
+            }
+          }
+        }
+      });
+      return { nodes, links };
+    }
+
+    // Run the script
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<head>
+  <style> body { margin: 0; } </style>
+
+  <script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three",
+    "three/": "https://esm.sh/three/"
+  }
+}
+</script>
+</head>
+
+<body>
+  <div id="3d-graph"></div>
+
+  <script type="module">
+    import ForceGraph3D from 'https://esm.sh/3d-force-graph?external=three';
+    import SpriteText from "https://esm.sh/three-spritetext";
+
+    async function loadData() {
+      try {
+        const response = await fetch("all_transformed.txt");
+        const text = await response.text();
+        const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+
+        const nodes = [];
+        const links = [];
+
+        lines.forEach((line) => {
+          const match = line.match(/^([^\s]+)\s+(.*)$/);
+          if (match) {
+            const word = match[1].replace(/[:.,]/g, "");
+            const definition = match[2].trim();
+
+            nodes.push({ id: word, definition });
+
+            if (nodes.length > 1) {
+              links.push({
+                source: nodes[nodes.length - 2].id,
+                target: word
+              });
+            }
+          }
+        });
+
+        return { nodes, links };
+      } catch (err) {
+        console.error("Fetch error:", err);
+        return { nodes: [], links: [] };
+      }
+    }
+
+    loadData().then(gData => {
+      if (!gData.nodes.length) return;
+
+      const Graph = ForceGraph3D()
+        (document.getElementById('3d-graph'))
+        .graphData(gData)
+        .warmupTicks(70) // adjust to taste
+        .cooldownTicks(0)
+
+        // 👇 always-visible labels
+        .nodeThreeObject(node => {
+          const sprite = new SpriteText(node.id);
+          sprite.material.depthWrite = false;
+          sprite.color = '#FFFFFF';
+          sprite.textHeight = 8;
+          sprite.center.y = -0.6;
+          return sprite;
+        })
+
+        .nodeThreeObjectExtend(true);
+
+      // physics tuning
+      Graph.d3Force('charge').strength(-120);
+
+      // optional: zoom-based spacing improvement
+      Graph.d3Force('link').distance(30);
+    });
+
+  </script>
+</body>

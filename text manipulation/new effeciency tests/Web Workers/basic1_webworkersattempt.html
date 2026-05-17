@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body { margin: 0; }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/3d-force-graph"></script>
+  </head>
+
+  <body>
+    <div id="3d-graph"></div>
+
+    <script>
+      const N = 300;
+
+      const gData = {
+        nodes: [...Array(N).keys()].map(i => ({ id: i })),
+        links: [...Array(N).keys()]
+          .filter(id => id)
+          .map(id => ({
+            source: id,
+            target: Math.round(Math.random() * (id - 1))
+          }))
+      };
+
+      const Graph = new ForceGraph3D(document.getElementById('3d-graph'))
+        .graphData(gData)
+        .cooldownTicks(0) // disable built-in simulation
+        .nodeAutoColorBy('id');
+
+      // 🧠 Create worker from a Blob (inline worker!)
+      const workerCode = `
+        importScripts('https://cdn.jsdelivr.net/npm/d3-force-3d/build/d3-force-3d.min.js');
+
+        self.onmessage = function(e) {
+          const nodes = e.data.nodes.map(n => ({ ...n }));
+          const links = e.data.links;
+
+          const sim = d3.forceSimulation(nodes)
+            .force("link", d3.forceLink(links).distance(50))
+            .force("charge", d3.forceManyBody().strength(-50))
+            .force("center", d3.forceCenter(0, 0, 0))
+            .stop();
+
+          for (let i = 0; i < 200; i++) {
+            sim.tick();
+          }
+
+          const positions = nodes.map(n => ({
+            x: n.x,
+            y: n.y,
+            z: n.z
+          }));
+
+          self.postMessage({ positions });
+        };
+      `;
+
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      const worker = new Worker(URL.createObjectURL(blob));
+
+      // send data to worker
+      worker.postMessage(gData);
+
+      // receive computed positions
+      worker.onmessage = (e) => {
+        const { positions } = e.data;
+
+        gData.nodes.forEach((node, i) => {
+          node.x = positions[i].x;
+          node.y = positions[i].y;
+          node.z = positions[i].z;
+        });
+
+        Graph.graphData(gData); // update rendering
+      };
+    </script>
+  </body>
+</html>

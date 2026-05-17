@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* Styling the clickable text */
+        .toggle-btn {
+            color: blue;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: bold;
+            user-select: none; /* Prevents text highlighting on click */
+        }
+
+        /* Hiding the paragraph by default */
+        #lorem-text {
+            display: none;
+            margin-top: 10px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <span class="toggle-btn" onclick="revealText()">Click here to see more</span>
+
+    <p id="lorem-text">
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor 
+        incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis 
+        nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+    </p>
+
+    <script>
+        function revealText() {
+            var text = document.getElementById("lorem-text");
+            
+            // Toggle between showing and hiding
+            if (text.style.display === "block") {
+                text.style.display = "none";
+            } else {
+                text.style.display = "block";
+            }
+        }
+    </script>
+
+</body>
+</html>

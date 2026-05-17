@@ -1,0 +1,112 @@
+
+
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <style> body { margin: 0; background: #000; } </style>
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
+<body>
+  <div id="3d-graph"></div>
+
+
+
+<script type="module">
+  import SpriteText from "https://esm.sh/three-spritetext";
+
+  async function startVisualization() {
+    // 1. FETCH THE BOOK
+    // Replace with your actual filename. 
+    // Since it's served locally, we just use the name.
+    const response = await fetch("https://salty-ridge-08083-ab6d4683d9c0.herokuapp.com/files_for_me/(A%20People's%20History%20of%20the%20United%20States%201)%20Howard%20Zinn%20-%20A%20People's%20History%20of%20the%20United%20States-HarperCollins%20(2009).txt");
+    const fullText = await response.text();
+
+    // 2. LIMIT THE TEXT (Optional)
+    // Even with a 3D graph, 500,000 words might crash your browser.
+    // Let's start with the first 30,000 characters.
+    const processedText = fullText.slice(0, 30000);
+
+    // 3. RUN THE GRAPH LOGIC
+    const gData = generateGraphData(processedText);
+
+    // 4. INITIALIZE THE GRAPH
+    const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
+      .graphData(gData)
+      .nodeThreeObject(node => {
+        const sprite = new SpriteText(node.id);
+        sprite.color = '#00ffcc';
+        sprite.textHeight = 4;
+        return sprite;
+      })
+      .nodeThreeObjectExtend(true);
+  }
+
+  // Define your generateGraphData function here...
+ 
+    function generateGraphData(text) {
+      const nodes = [];
+      const links = [];
+      const seenWords = new Map(); // Map word -> node object
+        
+      // In JavaScript, a Map is a specialized collection that stores key-value pairs. In the context of your 3D graph, it acts as the "memory" of your script to prevent creating duplicate nodes for the same word.
+
+      // Your cleaning logic
+      const cleanText = text
+        .replace(/(\r?\n){2,}/g, '\n')
+        .replace(/([\.!\?,])\1+/g, '$1');
+
+      // Your sentence splitting logic
+      //In that specific line of code, sentences is an Array of Strings.
+      const sentences = cleanText.split(/(?<=[.!?])/g);
+
+      sentences.forEach(sentence => {
+        //.forEach: Loops through every sentence in your sentences array.
+        const trimmed = sentence.trim();
+        //.trim(): Cuts off accidental spaces at the start or end of the sentence
+        if (/[a-zA-Z0-9]/.test(trimmed)) {
+          //if (/[a-zA-Z0-9]/.test(trimmed)): This is the bouncer at the door. It checks if the sentence actually contains a letter or number. If the sentence is just "... " or "---", the code skips it entirely.
+          const words = trimmed.split(/\s+/)
+           //             const words = trimmed.split(/\s+/) // 1. Split by spaces
+            .filter(word => /[a-zA-Z0-9]/.test(word))
+            .map(w => w.toLowerCase().replace(/[^\w]/g, '')); // Normalize            
+            //   .filter(word => /[a-zA-Z0-9]/.test(word)) // 2. Throw out "junk" words like "-"
+            //   .map(w => w.toLowerCase().replace(/[^\w]/g, '')); // 3. Make lowercase and remove symbols
+
+          for (let i = 0; i < words.length; i++) {
+            const currentWord = words[i];
+            const nextWord = words[i+1];
+            // Now that we have a clean list of words for a single sentence, we loop through them to build the graph:
+
+            // Add Node if it's new
+            if (!seenWords.has(currentWord)) {
+              const newNode = { id: currentWord, group: 1 }; //add other characteristics about the node here
+              nodes.push(newNode);
+              seenWords.set(currentWord, newNode); //recall seenwords is a map object, item and its key
+            }
+
+            // Link to the next word (The "Order of Appearance" Link)
+            if (nextWord) {
+              links.push({
+                source: currentWord,
+                target: nextWord
+              });
+            }
+          }
+        }
+      });
+
+      return { nodes, links };
+    }
+
+
+  // Launch the process
+  startVisualization();
+</script>
+
+
+
+</body>
+</html>

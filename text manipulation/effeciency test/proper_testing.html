@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: sans-serif;
+    }
+
+    #3d-graph {
+      position: absolute;
+      inset: 0;
+    }
+
+    #perf-monitor {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: #00ff00;
+      padding: 10px 12px;
+      font-family: monospace;
+      font-size: 14px;
+      border: 1px solid #444;
+      z-index: 1000;
+      pointer-events: none;
+      min-width: 220px;
+      line-height: 1.5;
+    }
+
+    button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+      padding: 10px 12px;
+      background: black;
+      color: orange;
+      border: 1px solid orange;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
+
+<body>
+  <button id="toggleBtn">Toggle Nodes</button>
+
+  <div id="perf-monitor">
+    <div>Draw calls: <span id="draw-calls">0</span></div>
+    <div>Triangles: <span id="tri-count">0</span></div>
+    <div>Geometries: <span id="geo-count">0</span></div>
+    <div>Textures: <span id="tex-count">0</span></div>
+    <div>FPS: <span id="fps">0</span></div>
+  </div>
+
+  <div id="3d-graph"></div>
+
+  <script>
+    const N = 5000;
+
+    const gData = {
+      nodes: [...Array(N).keys()].map(i => ({ id: i })),
+      links: [...Array(N).keys()]
+        .filter(id => id)
+        .map(id => ({
+          source: id,
+          target: Math.round(Math.random() * (id - 1))
+        }))
+    };
+
+    const Graph = ForceGraph3D({
+      controlType: 'fly'
+    })(document.getElementById('3d-graph'))
+      .graphData(gData);
+
+
+
+    const renderer = Graph.renderer();
+    renderer.info.autoReset = false;
+    const drawCallsEl = document.getElementById('draw-calls');
+    const triEl = document.getElementById('tri-count');
+    const geoEl = document.getElementById('geo-count');
+    const texEl = document.getElementById('tex-count');
+    const fpsEl = document.getElementById('fps');
+    let visible = true;
+    document.getElementById('toggleBtn').onclick = () => {
+      visible = !visible;
+      Graph.graphData().nodes.forEach(n => {
+        if (n.__threeObj) n.__threeObj.visible = visible;
+      });
+    };
+    let lastTime = performance.now();
+    let frames = 0;
+    function updatePerf() {
+      const info = renderer.info;
+
+      drawCallsEl.textContent = info.render.calls;
+      triEl.textContent = info.render.triangles;
+      geoEl.textContent = info.memory.geometries;
+      texEl.textContent = info.memory.textures;
+
+      frames++;
+      const now = performance.now();
+      const delta = now - lastTime;
+
+      if (delta >= 1000) {
+        fpsEl.textContent = (frames * 1000 / delta).toFixed(1);
+        frames = 0;
+        lastTime = now;
+      }
+
+      renderer.info.reset();
+      requestAnimationFrame(updatePerf);
+    }
+
+    requestAnimationFrame(updatePerf);
+  </script>
+</body>
+</html>

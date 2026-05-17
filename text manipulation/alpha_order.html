@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+    
+    /* Shared control styling */
+    .control-group {
+      position: absolute;
+      bottom: 20px;
+      display: grid;
+      gap: 10px;
+      z-index: 999;
+    }
+
+    /* Left side (WASD) */
+    #wasd-controls {
+      left: 20px;
+      grid-template-areas: 
+        ". w ."
+        "a s d";
+    }
+
+    /* Right side (Arrows) */
+    #arrow-controls {
+      right: 20px;
+      grid-template-areas: 
+        ". up ."
+        "left down right";
+    }
+
+    .key {
+      width: 45px;
+      height: 45px;
+      background: rgba(255, 165, 0, 0.15);
+      border: 1px solid orange;
+      color: orange;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      user-select: none;
+      font-weight: bold;
+      font-size: 14px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .key:active {
+      background: rgba(255, 165, 0, 0.5);
+    }
+
+    /* Mapping areas */
+    #w { grid-area: w; } #a { grid-area: a; } #s { grid-area: s; } #d { grid-area: d; }
+    #up { grid-area: up; } #left { grid-area: left; } #down { grid-area: down; } #right { grid-area: right; }
+
+    /* Right side alphabet slider */
+#letter-slider-wrapper{
+  position:absolute;
+  right:20px;
+  top:120px;
+  z-index:999;
+  display:flex;
+  align-items:center;
+}
+
+/* slider */
+#letter-slider-container{
+  position:relative;
+  width:300px;
+  transform:rotate(-90deg);
+}
+
+/* vertical letters */
+#letterColumn{
+  display:flex;
+  flex-direction:column;
+  margin-left:20px;
+  font-size:14px;
+  color:rgba(255,165,0,0.3);
+  font-weight:bold;
+}
+
+.letterActive{
+  color:orange;
+}
+
+.wrapper{
+  height:300px;
+  display:flex;
+  align-items:center;
+}
+
+.slider-container{
+  position:relative;
+  width:300px;
+  transform:rotate(-90deg);
+}
+
+.slider-container input[type=range]{
+  position:absolute;
+  width:100%;
+  pointer-events:none;
+  -webkit-appearance:none;
+  background:transparent;
+}
+
+input[type=range]::-webkit-slider-thumb{
+  pointer-events:all;
+  -webkit-appearance:none;
+  height:16px;
+  width:16px;
+  border-radius:50%;
+  background:orange;
+  cursor:pointer;
+}
+
+input[type=range]::-webkit-slider-runnable-track{
+  height:6px;
+  background:rgba(255,165,0,0.3);
+  border-radius:3px;
+}
+
+#letter-slider-ui{
+  position:absolute;
+  right:20px;
+  top:120px;
+  display:flex;
+  align-items:center;
+  z-index:999;
+}
+
+#letterColumn{
+  display:flex;
+  flex-direction:column;
+  margin-left:18px;
+  font-size:14px;
+  font-weight:bold;
+  color:rgba(255,165,0,0.25);
+}
+
+.letterActive{
+  color:orange;
+}
+
+</style>
+</head>
+
+<body>
+<button id="hideNodesBtn" style="
+position:absolute;
+top:20px;
+left:20px;
+z-index:1000;
+padding:10px;
+background:black;
+color:orange;
+border:1px solid orange;
+border-radius:6px;
+">
+Toggle Nodes
+</button>
+
+  <div id="wasd-controls" class="control-group">
+    <div class="key" id="w">W</div>
+    <div class="key" id="a">A</div>
+    <div class="key" id="s">S</div>
+    <div class="key" id="d">D</div>
+  </div>
+
+  <div id="arrow-controls" class="control-group">
+    <div class="key" id="up">▲</div>
+    <div class="key" id="left">◀</div>
+    <div class="key" id="down">▼</div>
+    <div class="key" id="right">▶</div>
+  </div>
+
+<div id="letter-slider-wrapper">
+  <div id="letter-slider-container">
+    <input type="range" min="0" max="25" value="0" step="1" id="minSlider">
+    <input type="range" min="0" max="25" value="25" step="1" id="maxSlider">
+  </div>
+
+  <div id="letterColumn"></div>
+</div>
+
+
+  <div id="3d-graph"></div>
+
+<script type="module">
+  import ForceGraph3D from 'https://esm.sh/3d-force-graph';
+  import SpriteText from 'https://esm.sh/three-spritetext';
+
+  // Simulation engine
+  function simulateKey(code, type) {
+    const event = new KeyboardEvent(type, {
+      code: code,
+      key: code,
+      bubbles: true
+    });
+    window.dispatchEvent(event);
+  }
+
+  // Key mappings
+  const keyMap = {
+    'w': 'KeyW', 'a': 'KeyA', 's': 'KeyS', 'd': 'KeyD',
+    'up': 'ArrowUp', 'down': 'ArrowDown', 'left': 'ArrowLeft', 'right': 'ArrowRight'
+  };
+  
+  Object.keys(keyMap).forEach(id => {
+    const el = document.getElementById(id);
+    ['mousedown', 'touchstart'].forEach(evt => 
+      el.addEventListener(evt, (e) => { e.preventDefault(); simulateKey(keyMap[id], 'keydown'); })
+    );
+    ['mouseup', 'touchend', 'touchcancel'].forEach(evt => 
+      el.addEventListener(evt, (e) => { e.preventDefault(); simulateKey(keyMap[id], 'keyup'); })
+    );
+  });
+
+  async function loadData() {
+    try {
+      const response = await fetch("transformed_dictionary.txt");
+      const text = await response.text();
+      const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+      const nodes = [];
+      const links = [];
+
+      lines.forEach((line) => {
+        const match = line.match(/^([^\s]+)\s+(.*)$/);
+        if (match) {
+          const word = match[1].replace(/[:.,]/g, "");
+          const definition = match[2].trim();
+          nodes.push({ id: word, definition: definition });
+          if (nodes.length > 1) {
+            links.push({ source: nodes[nodes.length - 2].id, target: word });
+          }
+        }
+      });
+      return { nodes, links };
+    } catch (err) {
+      console.error("Fetch error:", err);
+      return { nodes: [], links: [] };
+    }
+  }
+
+  loadData().then(gData => {
+    if (gData.nodes.length === 0) return;
+
+    const Graph = ForceGraph3D({ controlType: 'fly' })(document.getElementById("3d-graph"))
+      .graphData(gData)
+      .nodeThreeObject(node => {
+        const sprite = new SpriteText(node.id);
+        sprite.color = "orange";
+        sprite.textHeight = 8;
+        return sprite;
+      })
+      .nodeThreeObjectExtend(true)
+      .nodeLabel(node => `<b>${node.id}</b>: ${node.definition}`)
+     .onNodeClick(node => {
+
+  const distance = 200;
+
+  const camera = Graph.camera();
+  const cameraPos = camera.position;
+
+  const dirX = node.x - cameraPos.x;
+  const dirY = node.y - cameraPos.y;
+  const dirZ = node.z - cameraPos.z;
+
+  const length = Math.hypot(dirX, dirY, dirZ);
+
+  const ratio = distance / length;
+
+  const newPos = {
+    x: node.x - dirX * ratio,
+    y: node.y - dirY * ratio,
+    z: node.z - dirZ * ratio
+  };
+
+  Graph.cameraPosition(newPos, node, 1500);
+
+});
+    Graph.d3Force("charge").strength(-200);
+
+
+      let nodesVisible = true;
+
+document.getElementById("hideNodesBtn").onclick = () => {
+  nodesVisible = !nodesVisible;
+
+  Graph.graphData().nodes.forEach(node => {
+    if (node.__threeObj) {
+      node.__threeObj.visible = nodesVisible;
+    }
+  });
+};
+  });
+
+
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+const minSlider = document.getElementById("minSlider");
+const maxSlider = document.getElementById("maxSlider");
+const column = document.getElementById("letterColumn");
+
+/* create vertical letters */
+letters.forEach(letter=>{
+  const div = document.createElement("div");
+  div.textContent = letter;
+  column.appendChild(div);
+});
+
+function update(){
+
+  let min = parseInt(minSlider.value);
+  let max = parseInt(maxSlider.value);
+
+  if(min > max){
+    [min,max] = [max,min];
+  }
+
+  const items = column.children;
+
+  for(let i=0;i<items.length;i++){
+    if(i>=min && i<=max){
+      items[i].classList.add("letterActive");
+    }else{
+      items[i].classList.remove("letterActive");
+    }
+  }
+}
+
+minSlider.oninput = update;
+maxSlider.oninput = update;
+
+update();
+
+
+</script>
+</body>
+</html>

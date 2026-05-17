@@ -1,0 +1,80 @@
+<head>
+  <style> body { margin: 0; } </style>
+
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
+
+<body>
+  <div id="3d-graph"></div>
+
+  <script type="module">
+
+    import SpriteText from "https://esm.sh/three-spritetext";
+
+    // ----------------------------
+    // 1. LOAD + PARSE TEXT FILE
+    // ----------------------------
+    const text = await fetch('./transformed_dictionary.txt').then(r => r.text());
+
+    const lines = text.split('\n').filter(Boolean);
+
+    const nodes = [];
+    const links = [];
+
+    let prevWord = null;
+
+    for (const line of lines) {
+      const match = line.match(/^([A-Z\-]+):/);
+      if (!match) continue;
+
+      const word = match[1];
+
+      nodes.push({
+        id: word,
+        title: word
+      });
+
+      // optional: chain words into a graph path
+      if (prevWord) {
+        links.push({
+          source: prevWord,
+          target: word
+        });
+      }
+
+      prevWord = word;
+    }
+
+    const gData = { nodes, links };
+
+    // ----------------------------
+    // 2. FORCE GRAPH
+    // ----------------------------
+    const Graph = new ForceGraph3D(document.getElementById('3d-graph'))
+      .graphData(gData)
+      .nodeAutoColorBy('id')
+
+      // ----------------------------
+      // 3. LABEL EACH NODE
+      // ----------------------------
+      .nodeThreeObject(node => {
+        const sprite = new SpriteText(node.title);
+
+        sprite.material.depthWrite = false; // keeps text readable
+        sprite.color = 'black';
+        sprite.textHeight = 6;
+
+        // lift above node
+        sprite.position.y = 5;
+
+        return sprite;
+      })
+      .nodeThreeObjectExtend(true);
+
+    // ----------------------------
+    // 4. SPACING (IMPORTANT FOR TEXT)
+    // ----------------------------
+    Graph.d3Force('charge').strength(-200);
+
+  </script>
+</body>

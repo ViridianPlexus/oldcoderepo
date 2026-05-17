@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Digital Rain</title>
+    <style>
+        html {
+            background: black;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: monospace; /* Matching the canvas font style */
+        }
+
+        /* The new red text overlay */
+        #top-left-text {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #FC1212;
+            z-index: 10; /* Ensures it stays above the canvas */
+            font-size: 1.2rem;
+            pointer-events: auto; /* Allows clicks to pass through to the canvas if needed */
+        }
+
+        #Matrix {
+            display: block;
+        }
+
+        a {
+            color: #FC1212;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="top-left-text"><br>
+<br>
+<br>
+<br> 
+<br> 
+<br> 
+<a href="" >◼</a>
+<br> 
+
+
+
+</div>
+</div>
+
+    <canvas id="Matrix"></canvas>
+
+    <script>
+        const canvas = document.getElementById('Matrix');
+        const context = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const korean = "ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎㅏㅑㅓㅕㅗㅛㅜㅠㅡㅣ";
+        const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÇÁÂÃÀÇÉÈÊËÍÎÏÑÓÔÕÚÙÛÜŸŒ';
+        const nums = '0123456789';
+        const arabiby = "ابتثجحخدذرزسشصضطظعغفقكلمنهوي";
+        const cyrillic = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+
+        const alphabet = korean + latin + nums + arabiby + cyrillic;
+
+        const fontSize = 16;
+        let columns = canvas.width / fontSize;
+
+        const rainDrops = [];
+
+        for (let x = 0; x < columns; x++) {
+            rainDrops[x] = 1;
+        }
+
+        const draw = () => {
+            // Using black with low opacity to create the fade/trail effect
+            context.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            context.fillStyle = '#FC1212';
+            context.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                context.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    rainDrops[i] = 0;
+                }
+                rainDrops[i]++;
+            }
+        };
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            // Note: If you want to handle column recalculation on resize, 
+            // you'd re-initialize the rainDrops array here.
+        });
+
+        setInterval(draw, 30);
+    </script>
+</body>
+</html>

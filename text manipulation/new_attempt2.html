@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style> body { margin: 0; background: #000; } </style>
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
+<body>
+  <div id="3d-graph"></div>
+
+  <script type="module">
+    import SpriteText from "https://esm.sh/three-spritetext";
+
+    // 1. DATA INPUT 
+    // Since we are in a browser, paste a sample of your Zinn text here
+    const myText = `A PEOPLE’S HISTORY
+
+OF THE
+
+UNITED STATES
+
+
+1492—PRESENT
+
+
+
+
+
+HOWARD ZINN
+
+
+
+
+
+To Noah, Georgia, Serena, Naushon, Will—and their generation
+
+
+
+
+
+Contents
+
+
+
+
+Cover
+
+
+
+
+
+Title Page
+
+
+
+
+
+Chapter 1 – Columbus, the Indians, and Human Progress
+
+
+
+
+
+Chapter 2 – Drawing the Color Line
+
+
+
+
+
+Chapter 3 – Persons of Mean and Vile Condition
+
+
+
+
+
+Chapter 4 – Tyranny Is Tyranny
+
+
+
+
+
+Chapter 5 – A Kind of Revolution
+
+
+
+
+
+Chapter 6 – The Intimately Oppressed
+
+
+
+
+
+Chapter 7 – As Long as Grass Grows or Water Runs
+
+
+
+
+
+Chapter 8 – We Take Nothing by Conquest, Thank God
+
+
+
+
+
+Chapter 9 – Slavery Without Submission, Emancipation Without Freedom
+
+
+
+
+
+Chapter 10 – The Other Civil War
+
+
+
+
+
+Chapter 11 – Robber Barons and Rebels
+
+
+
+
+
+Chapter 12 – The Empire and The People
+
+
+
+
+
+Chapter 13 – The Socialist Challenge
+
+
+
+
+
+Chapter 14 – War is the Health of the State
+
+
+
+
+
+Chapter 15 – Self-Help in Hard Times
+
+
+
+
+
+Chapter 16 – A People’s War?
+
+
+
+
+
+Chapter 17 – “Or Does it Explode?”
+
+
+
+
+
+Chapter 18 – The Impossible Victory: Vietnam
+
+
+
+
+
+Chapter 19 – Surprises
+
+
+
+
+
+Chapter 20 – The Seventies: Under Control?
+
+
+
+
+
+Chapter 21 – Carter-Reagan-Bush: The Bipartisan Consensus
+
+
+
+
+
+Chapter 22 – The Unreported Resistance
+
+
+
+
+
+Chapter 23 – The Coming Revolt of the Guards
+
+
+
+
+
+Chapter 24 – The Clinton Presidency
+
+
+
+
+
+Chapter 25 – The 2000 Election and the “War on Terrorism”
+
+
+
+
+
+Afterword
+
+
+
+
+
+Bibliography
+
+
+
+
+
+Index
+
+
+
+
+
+Acknowledgments
+
+
+
+
+
+About the Author
+
+
+
+
+
+Other Books by Howard Zinn
+
+
+
+
+
+Copyright
+
+
+
+
+
+About the Publisher
+
+
+
+
+
+Chapter 1
+
+Columbus, the Indians, and Human Progress
+
+
+
+
+
+Arawak men and women, naked, tawny, and full of wonder, emerged from their villages onto the island’s beaches and swam out to get a closer look at the strange big boat. When Columbus and his sailors came ashore, carrying swords, speaking oddly, the Arawaks ran to greet them, brought them food, water, gifts. He later wrote of this in his log:
+
+
+
+
+
+They . . . brought us parrots and balls of cotton and spears and many other things, which they exchanged for the glass beads and hawks’ bells. They willingly traded everything they owned. . . . They were well-built, with good bodies and handsome features. . . . They do not bear arms, and do not know them, for I showed them a sword, they took it by the edge and cut themselves out of ignorance. They have no iron. Their spears are made of cane. . . . They would make fine servants. . . . With fifty men we could subjugate them all and make them do whatever we want.
+
+
+
+These Arawaks of the Bahama Islands were much like Indians on the mainland, who were remarkable (European observers were to say again and again) for their hospitality, their belief in sharing. These traits did not stand out in the Europe of the Renaissance, dominated as it was by the religion of popes, the government of kings, the frenzy for money that marked Western civilization and its first messenger to the Americas, Christopher Columbus.
+
+Columbus wrote:
+
+
+
+
+
+As soon as I arrived in the Indies, on the first Island which I found, I took some of the natives by force in order that they might learn and might give me information of whatever there is in these parts.
+
+
+
+The information that Columbus wanted most was: Where is the gold? He had persuaded the king and queen of Spain to finance an expedition to the lands, the wealth, he expected would be on the other side of the Atlantic—the Indies and Asia, gold and spices. For, like other informed people of his time, he knew the world was round and he could sail west in order to get to the Far East.
+`; 
+
+    function generateGraphData(text) {
+      const nodes = [];
+      const links = [];
+      const seenWords = new Map(); // Map word -> node object
+        
+      // In JavaScript, a Map is a specialized collection that stores key-value pairs. In the context of your 3D graph, it acts as the "memory" of your script to prevent creating duplicate nodes for the same word.
+
+      // Your cleaning logic
+      const cleanText = text
+        .replace(/(\r?\n){2,}/g, '\n')
+        .replace(/([\.!\?,])\1+/g, '$1');
+
+      // Your sentence splitting logic
+      //In that specific line of code, sentences is an Array of Strings.
+      const sentences = cleanText.split(/(?<=[.!?])/g);
+
+      sentences.forEach(sentence => {
+        //.forEach: Loops through every sentence in your sentences array.
+        const trimmed = sentence.trim();
+        //.trim(): Cuts off accidental spaces at the start or end of the sentence
+        if (/[a-zA-Z0-9]/.test(trimmed)) {
+          //if (/[a-zA-Z0-9]/.test(trimmed)): This is the bouncer at the door. It checks if the sentence actually contains a letter or number. If the sentence is just "... " or "---", the code skips it entirely.
+          const words = trimmed.split(/\s+/)
+           //             const words = trimmed.split(/\s+/) // 1. Split by spaces
+            .filter(word => /[a-zA-Z0-9]/.test(word))
+            .map(w => w.toLowerCase().replace(/[^\w]/g, '')); // Normalize            
+            //   .filter(word => /[a-zA-Z0-9]/.test(word)) // 2. Throw out "junk" words like "-"
+            //   .map(w => w.toLowerCase().replace(/[^\w]/g, '')); // 3. Make lowercase and remove symbols
+
+          for (let i = 0; i < words.length; i++) {
+            const currentWord = words[i];
+            const nextWord = words[i+1];
+            // Now that we have a clean list of words for a single sentence, we loop through them to build the graph:
+
+            // Add Node if it's new
+            if (!seenWords.has(currentWord)) {
+              const newNode = { id: currentWord, group: 1 }; //add other characteristics about the node here
+              nodes.push(newNode);
+              seenWords.set(currentWord, newNode); //recall seenwords is a map object, item and its key
+            }
+
+            // Link to the next word (The "Order of Appearance" Link)
+            if (nextWord) {
+              links.push({
+                source: currentWord,
+                target: nextWord
+              });
+            }
+          }
+        }
+      });
+
+      return { nodes, links };
+    }
+
+    // 2. INITIALIZE
+    const gData = generateGraphData(myText);
+
+    const Graph = ForceGraph3D()(document.getElementById('3d-graph'))
+      .graphData(gData)
+      .nodeThreeObject(node => {
+        const sprite = new SpriteText(node.id);
+        sprite.color = '#00ffcc';
+        sprite.textHeight = 4;
+        return sprite;
+      })
+      .nodeThreeObjectExtend(true)
+      .linkDirectionalArrowLength(3)
+      .linkDirectionalArrowRelPos(1)
+      .linkCurvature(0.2); // Prevents overlapping links between reused words
+
+    // Physics to give text room to breathe
+    Graph.d3Force('charge').strength(-120);
+  </script>
+</body>
+</html>

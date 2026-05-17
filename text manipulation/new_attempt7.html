@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; }
+    
+    /* The Sidebar Menu */
+    #ui-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 280px;
+      background: rgba(20, 20, 20, 0.85);
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 20px;
+      color: white;
+      z-index: 100;
+      pointer-events: all;
+      box-shadow: 0 0 20px rgba(0,255,204,0.1);
+    }
+
+    h2 { color: #00ffcc; margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid #444; padding-bottom: 10px; }
+    .stat-label { color: #aaa; font-size: 0.8rem; text-transform: uppercase; margin-top: 15px; }
+    .stat-value { font-size: 1.1rem; font-weight: bold; color: #fff; margin-bottom: 5px; }
+    .highlight { color: #00ffcc; }
+    
+    #controls-hint {
+      margin-top: 20px;
+      font-size: 0.75rem;
+      color: #888;
+      background: rgba(255,255,255,0.05);
+      padding: 10px;
+      border-radius: 4px;
+    }
+  </style>
+  <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+</head>
+<body>
+
+  <div id="ui-panel">
+    <h2>Zinn Graph Analysis</h2>
+    
+    <div class="stat-label">Most Referenced Word</div>
+    <div id="most-referenced" class="stat-value">--</div>
+    
+    <div class="stat-label">Unique Concepts (Nodes)</div>
+    <div id="node-count" class="stat-value">--</div>
+    
+    <div class="stat-label">Relationship Density</div>
+    <div id="link-count" class="stat-value">--</div>
+
+    <div class="stat-label">Data Conclusion</div>
+    <div id="conclusion" style="font-size: 0.85rem; line-height: 1.4; color: #ddd;">
+      Analyzing linguistic patterns...
+    </div>
+
+    <div id="controls-hint">
+      <b>Flight Controls:</b><br>
+      W/S: Thrust | A/D: Strafe<br>
+      R/F: Fly Up/Down | Mouse: Aim
+    </div>
+  </div>
+
+  <div id="3d-graph"></div>
+
+  <script type="module">
+    import SpriteText from "https://esm.sh/three-spritetext";
+
+    async function init() {
+      const response = await fetch('./zinn.txt');
+      const fullText = await response.text();
+      const processedText = fullText.slice(0, 45000);
+      
+      const { gData, stats } = generateGraphData(processedText);
+
+      // Update the Menu with Data Science conclusions
+      document.getElementById('most-referenced').innerHTML = `<span class="highlight">${stats.mostFrequent.word}</span> (${stats.mostFrequent.count}x)`;
+      document.getElementById('node-count').innerText = stats.nodeCount;
+      document.getElementById('link-count').innerText = `${stats.linkCount} connections`;
+      document.getElementById('conclusion').innerText = `This segment focuses heavily on "${stats.mostFrequent.word}." The floating clusters represent "Islands of Thought"—sentences with unique vocabulary not repeated elsewhere in this sample.`;
+
+      const Graph = ForceGraph3D({ controlType: 'fly' })(document.getElementById('3d-graph'))
+        .graphData(gData)
+        .nodeThreeObject(node => {
+          const sprite = new SpriteText(node.id);
+          sprite.color = node.size > 5 ? '#ff0077' : '#00ffcc'; // Color code frequent words
+          sprite.textHeight = 2 + (Math.log(node.size + 1) * 3); // Logarithmic scaling so big words don't explode
+          return sprite;
+        })
+        .nodeThreeObjectExtend(true)
+        .linkDirectionalArrowLength(2)
+        .linkCurvature(0.2);
+
+      const controls = Graph.controls();
+      controls.movementSpeed = 120;
+      controls.rollSpeed = Math.PI / 6;
+
+      Graph.d3Force('charge').strength(-250);
+    }
+
+    function generateGraphData(text) {
+      const nodes = [];
+      const links = [];
+      const seenWords = new Map();
+      const stopWords = new Set(['the', 'and', 'of', 'to', 'in', 'a', 'is', 'it', 'that', 'was', 'as', 'for', 'with', 'on', 'be', 'by', 'from', 'had', 'were', 'which', 'his', 'they', 'not', 'but', 'had', 'at', 'this', 'or', "their"]);
+
+      const sentences = text.split(/(?<=[.!?])/g);
+
+      sentences.forEach(sentence => {
+        // We filter BEFORE looping, which automatically connects words across the "gap" of removed stop words
+        const words = sentence.trim().split(/\s+/)
+          .map(w => w.toLowerCase().replace(/[^\w]/g, ''))
+          .filter(word => word.length > 3 && !stopWords.has(word));
+
+        for (let i = 0; i < words.length; i++) {
+          const currentWord = words[i];
+          const nextWord = words[i + 1];
+
+          if (!seenWords.has(currentWord)) {
+            const newNode = { id: currentWord, size: 1 };
+            nodes.push(newNode);
+            seenWords.set(currentWord, newNode);
+          } else {
+            seenWords.get(currentWord).size += 1;
+          }
+
+          if (nextWord) {
+            links.push({ source: currentWord, target: nextWord });
+          }
+        }
+      });
+
+      // Stats Calculation
+      const sortedWords = [...nodes].sort((a, b) => b.size - a.size);
+      const stats = {
+        mostFrequent: { word: sortedWords[0]?.id || 'N/A', count: sortedWords[0]?.size || 0 },
+        nodeCount: nodes.length,
+        linkCount: links.length
+      };
+
+      return { gData: { nodes, links }, stats };
+    }
+
+    init();
+  </script>
+</body>
+</html>

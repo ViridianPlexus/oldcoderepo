@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<input type="range" min="0" max="25" value="0" step="1" id="slider">
+<p>Letter: <span id="output">A</span></p>
+
+<script>
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").slice(0,26);
+
+const slider = document.getElementById("slider");
+const output = document.getElementById("output");
+
+output.textContent = letters[slider.value];
+
+slider.oninput = function() {
+  output.textContent = letters[this.value];
+};
+</script>
+
+</body>
+</html>

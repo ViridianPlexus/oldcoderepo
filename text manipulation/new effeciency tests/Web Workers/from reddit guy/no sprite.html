@@ -1,0 +1,49 @@
+<div id="3d-graph"></div>
+
+<script type="module">
+import ForceGraph3D from 'https://esm.sh/3d-force-graph';
+import * as THREE from 'three';
+import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js?external=three';
+
+// Example data
+const gData = {
+  nodes: [
+    { id: "Apple", definition: "A fruit" },
+    { id: "Banana", definition: "Yellow fruit" }
+  ],
+  links: [{ source: "Apple", target: "Banana" }]
+};
+
+const Graph = new ForceGraph3D()
+  .graphData(gData)
+
+  // 👇 This replaces SpriteText
+  .nodeLabel(node => `${node.id}: ${node.definition}`);
+
+// Renderer
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.getElementById('3d-graph').appendChild(renderer.domElement);
+
+// Scene
+const scene = new THREE.Scene();
+scene.add(Graph);
+scene.add(new THREE.AmbientLight(0xcccccc, Math.PI));
+
+// Camera
+const camera = new THREE.PerspectiveCamera();
+camera.aspect = window.innerWidth / window.innerHeight;
+camera.updateProjectionMatrix();
+camera.position.z = 300;
+
+// Controls
+const controls = new TrackballControls(camera, renderer.domElement);
+
+// Animation loop
+(function animate() {
+  Graph.tickFrame();
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+})();
+</script>

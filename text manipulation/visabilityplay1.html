@@ -1,0 +1,56 @@
+<!-- make it such that the nodes appear or disappear based on proximity to the camera -->
+
+<div id="3d-graph"></div>
+
+<script src="https://unpkg.com/3d-force-graph"></script>
+<script>
+  const Graph = ForceGraph3D( {controlType: 'fly' })(document.getElementById('3d-graph'));
+
+  // Create 10 nodes randomly positioned
+  const data = {
+    nodes: [...Array(10).keys()].map(i => ({
+      id: i,
+      x: Math.random() * 200 - 100,
+      y: Math.random() * 200 - 100,
+      z: Math.random() * 200 - 100
+    })),
+    links: []
+  };
+
+  Graph.graphData(data);
+
+  const threshold = 150; // distance from camera
+
+  // Helper: distance between node and camera
+  function distanceToCamera(node, camera) {
+    const dx = node.x - camera.position.x;
+    const dy = node.y - camera.position.y;
+    const dz = node.z - camera.position.z;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }
+
+  // Visibility logic
+function updateVisibility() {
+  const camera = Graph.camera();
+
+  Graph.nodeVisibility(node => {
+    const dx = node.x - camera.position.x;
+    const dy = node.y - camera.position.y;
+    const dz = node.z - camera.position.z;
+    return Math.sqrt(dx*dx + dy*dy + dz*dz) < threshold;
+  });
+
+  requestAnimationFrame(updateVisibility);
+}
+  // Update continuously as camera moves
+  function updateVisibility() {
+    Graph.nodeVisibility(node => {
+      const camera = Graph.camera();
+      return distanceToCamera(node, camera) < threshold;
+    });
+
+    requestAnimationFrame(updateVisibility);
+  }
+
+  updateVisibility();
+</script>

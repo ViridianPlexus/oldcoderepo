@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+
+    #perf-monitor {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #00ff00;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 20px;
+    border: 1px solid #444;
+    pointer-events: none;
+    z-index: 1000;
+}
+  </style>
+</head>
+
+<body>
+<button id="hideNodesBtn" style="
+position:absolute;
+top:20px;
+left:20px;
+z-index:1000;
+padding:10px;
+background:black;
+color:orange;
+border:1px solid orange;
+border-radius:6px;
+">
+Toggle Nodes
+</button>
+
+<div id="perf-monitor">
+  <div>GPU draw calls: <span id="draw-calls">0</span></div>
+  <div>GPU memory: <span id="gpu-mem">0</span> MB</div>
+  <div>Geometries: <span id="geo-count">0</span></div>
+</div>
+
+<div id="3d-graph"></div>
+
+<script type="module">
+import * as THREE from 'https://esm.sh/three';
+import ForceGraph3D from 'https://esm.sh/3d-force-graph';
+
+async function loadData() {
+  const response = await fetch("all_transformed.txt");
+  const text = await response.text();
+
+  const nodes = [], links = [];
+
+  text.split("\n").forEach(line => {
+    const match = line.match(/^([^\s]+)\s+(.*)$/);
+    if (match) {
+      const word = match[1].replace(/[:.,]/g, "");
+      nodes.push({ id: word, definition: match[2].trim() });
+
+      if (nodes.length > 1) {
+        links.push({
+          source: nodes[nodes.length - 2].id,
+          target: word
+        });
+      }
+    }
+  });
+
+  return { nodes, links };
+}
+
+loadData().then(gData => {
+
+  const Graph = ForceGraph3D({ controlType: 'fly' })
+    (document.getElementById("3d-graph"))
+    .graphData(gData);
+
+  // -----------------------------
+  // INSTANCED MESH SETUP
+  // -----------------------------
+
+  const nodes = gData.nodes;
+
+  const geometry = new THREE.SphereGeometry(4, 8, 8);
+  const material = new THREE.MeshBasicMaterial({ color: 'orange' });
+
+  const instancedMesh = new THREE.InstancedMesh(
+    geometry,
+    material,
+    nodes.length
+  );
+
+  const dummy = new THREE.Object3D();
+
+  // assign instance index
+  nodes.forEach((n, i) => n._i = i);
+
+  Graph.scene().add(instancedMesh);
+
+  // IMPORTANT: disable default node objects
+  Graph
+    .nodeThreeObject(() => new THREE.Object3D());
+
+  // -----------------------------
+  // FORCE SIMULATION UPDATE LOOP
+  // -----------------------------
+  Graph.onEngineTick(() => {
+
+    nodes.forEach(n => {
+      if (n.x == null) return;
+
+      dummy.position.set(n.x, n.y, n.z);
+      dummy.updateMatrix();
+
+      instancedMesh.setMatrixAt(n._i, dummy.matrix);
+    });
+
+    instancedMesh.instanceMatrix.needsUpdate = true;
+  });
+
+  // ensure visibility is correct
+  instancedMesh.computeBoundingSphere();
+
+  // -----------------------------
+  // CAMERA / INTERACTION
+  // -----------------------------
+  Graph.onNodeClick(node => {
+    const distance = 200;
+    const cam = Graph.camera().position;
+    const dist = Math.hypot(
+      node.x - cam.x,
+      node.y - cam.y,
+      node.z - cam.z
+    );
+
+    const ratio = distance / dist;
+
+    Graph.cameraPosition(
+      {
+        x: node.x - (node.x - cam.x) * ratio,
+        y: node.y - (node.y - cam.y) * ratio,
+        z: node.z - (node.z - cam.z) * ratio
+      },
+      node,
+      1500
+    );
+  });
+
+  Graph.d3Force("charge").strength(-10);
+
+  // -----------------------------
+  // TOGGLE VISIBILITY (FIXED FOR INSTANCING)
+  // -----------------------------
+  let allVisible = true;
+
+  document.getElementById("hideNodesBtn").onclick = () => {
+    allVisible = !allVisible;
+
+    nodes.forEach(n => {
+      const scale = allVisible ? 1 : 0;
+
+      dummy.position.set(n.x || 0, n.y || 0, n.z || 0);
+      dummy.scale.set(scale, scale, scale);
+      dummy.updateMatrix();
+
+      instancedMesh.setMatrixAt(n._i, dummy.matrix);
+    });
+
+    instancedMesh.instanceMatrix.needsUpdate = true;
+  };
+
+    // 1. Get references to UI elements
+    const drawCallsEl = document.getElementById('draw-calls');
+    const memoryEl = document.getElementById('gpu-mem');
+    const geoEl = document.getElementById('geo-count');
+
+    // 2. Access the Three.js Renderer
+    const renderer = Graph.renderer();
+
+    // 3. Create an update loop
+    function updateMetrics() {
+        const info = renderer.info;
+        
+        // Update the UI
+        drawCallsEl.innerText = info.render.calls;
+        geoEl.innerText = info.memory.geometries;
+        
+        // Memory calculation (Approximate)
+        // Note: info.memory provides counts. To get MB like the example,
+        // you'd typically track your buffer sizes manually or use a specific extension.
+        // For a quick estimate based on the example:
+        const memMB = (info.memory.geometries * 0.5).toFixed(2); // Dummy multiplier for demo
+        memoryEl.innerText = memMB;
+
+        requestAnimationFrame(updateMetrics);
+      }
+
+    updateMetrics();
+
+});
+
+</script>
+</body>
+</html>

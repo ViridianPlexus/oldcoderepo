@@ -1,0 +1,33 @@
+<!-- change this code, make a node become invisible if the user clicks on it -->
+
+
+<div id="3d-graph"></div>
+
+<script src="https://unpkg.com/3d-force-graph"></script>
+<script>
+  const Graph = ForceGraph3D()(document.getElementById('3d-graph'));
+
+  // Create 10 nodes
+  const data = {
+    nodes: [...Array(10).keys()].map(i => ({
+      id: i,
+      hidden: false
+    })),
+    links: []
+  };
+
+  Graph.graphData(data);
+
+  // Visibility rule
+  Graph.nodeVisibility(node => !node.hidden);
+
+  // Click handler: hide node
+  Graph.onNodeClick(node => {
+    node.hidden = true;
+
+    // Re-apply visibility
+    Graph.nodeVisibility(Graph.nodeVisibility());
+    // or simply:
+    Graph.refresh();
+  });
+</script>

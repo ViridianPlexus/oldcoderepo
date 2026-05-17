@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>3D Force Graph Debug Logging</title>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #graph { width: 100vw; height: 100vh; }
+  </style>
+
+  <script src="https://unpkg.com/three"></script>
+  <script src="https://unpkg.com/3d-force-graph"></script>
+</head>
+
+<body>
+<div id="graph"></div>
+
+<script>
+  const nodes = Array.from({ length: 10 }, (_, i) => ({
+    id: i
+  }));
+
+  const links = Array.from({ length: 9 }, (_, i) => ({
+    source: i,
+    target: i + 1
+  }));
+
+  const Graph = ForceGraph3D({ controlType: 'fly' })(document.getElementById('graph'))
+    .graphData({ nodes, links })
+    .nodeAutoColorBy('id')
+   .nodeVal(n => n.__near ? 6 : 0.1)
+    .nodeThreeObjectExtend(true)
+    .refresh();
+    // .nodeColor(n => (n.__near ? 'limegreen' : 'red'));
+
+  Graph.cameraPosition({ x: 0, y: 0, z: 300 });
+
+  // ---------------------------
+  // DEBUG LOOP
+  // ---------------------------
+  function debugLoop() {
+    const cam = Graph.cameraPosition();
+
+    // Log camera position
+    console.log("CAMERA:", cam.x.toFixed(2), cam.y.toFixed(2), cam.z.toFixed(2));
+
+    // Log each node position
+    const currentNodes = Graph.graphData().nodes;
+
+    for (const n of currentNodes) {
+  console.log(n.id, n.x, n.y, n.z);
+}
+
+    requestAnimationFrame(debugLoop);
+  }
+
+const SHOW_DISTANCE = 150;
+
+function loop() {
+  const cam = Graph.cameraPosition();
+  const nodes = Graph.graphData().nodes;
+
+  for (const n of nodes) {
+    const dx = (n.x ?? 0) - cam.x;
+    const dy = (n.y ?? 0) - cam.y;
+    const dz = (n.z ?? 0) - cam.z;
+
+    const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+    n.__near = dist < SHOW_DISTANCE;
+  }
+Graph.refresh();
+  requestAnimationFrame(loop);
+}
+
+
+loop();
+</script>
+</body>
+</html>

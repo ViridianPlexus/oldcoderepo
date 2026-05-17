@@ -1,0 +1,44 @@
+<head>
+    <style> body { margin: 0; } </style>
+  
+    <script src="//cdn.jsdelivr.net/npm/3d-force-graph"></script>
+    <!--<script src="../../dist/3d-force-graph.js"></script>-->
+  </head>
+  
+  <body>
+    <div id="3d-graph"></div>
+  
+    <script type="module">
+      
+      import SpriteText from "https://esm.sh/three-spritetext";
+      //we import and use this for custom text that rotates with the viewer
+  
+
+      
+  
+  const Graph = new ForceGraph3D(document.getElementById('3d-graph'))
+          .jsonUrl('https://raw.githubusercontent.com/vasturiano/3d-force-graph/master/example/datasets/miserables.json')
+          .nodeAutoColorBy('group')
+          .nodeThreeObject(node => {
+            const sprite = new SpriteText(node.id);
+            sprite.material.depthWrite = false; // make sprite background transparent
+            sprite.color = node.color;
+            sprite.textHeight = 8;
+            sprite.center.y = -0.6; // shift above node
+            return sprite;
+          })
+          .nodeThreeObjectExtend(true);
+          //set to false to delete node spheres entirely
+  
+      // Spread nodes a little wider
+      Graph.d3Force('charge').strength(-120);
+      //adjusting the physics; Text takes up more horizontal space than spheres. If the nodes are too close, the words will overlap and become unreadable. This line increases the repulsion force (the "charge") between nodes, pushing them further apart so the labels have room to breathe.
+  
+
+
+
+    </script>
+  </body>
+
+
+  <!-- http://localhost:3000 -->

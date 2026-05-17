@@ -1,0 +1,1546 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSINT — MARCUS T. WEBB</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root {
+    --bg:     #0b0d12;
+    --surf:   #111318;
+    --surf2:  #161920;
+    --border: rgba(255,255,255,0.055);
+    --brmid:  rgba(255,255,255,0.10);
+    --bract:  rgba(255,255,255,0.17);
+    --tdim:   #333845;
+    --tmid:   #606880;
+    --t:      #a0a8b8;
+    --tbrt:   #ced2da;
+    --acc:    #c4a882;
+    --red:    #8a4a4a;
+    --grn:    #4a7844;
+    --mono:   'JetBrains Mono', monospace;
+    --hh: 46px; --sh: 28px; --sw: 214px; --tb: 48px;
+  }
+  html, body { width:100%; height:100%; background:var(--bg); color:var(--t); font-family:var(--mono); overflow:hidden; }
+
+  /* ════════════════════════════════════════════════
+     MOBILE-FIRST LAYOUT
+     --hh  = top header height
+     --tb  = bottom toolbar height (mobile controls)
+     --sh  = status bar height
+     --sw  = sidebar width
+  ════════════════════════════════════════════════ */
+
+  /* ── HEADER (top bar — identity only on mobile) ── */
+  #hdr {
+    position:fixed; top:0; left:0; right:0; height:var(--hh);
+    background:var(--surf); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; z-index:1000;
+    overflow:hidden;
+  }
+  .hb  { display:flex; align-items:center; height:100%; padding:0 12px; border-right:1px solid var(--border); flex-shrink:0; white-space:nowrap; }
+  .hb.logo { width:46px; justify-content:center; padding:0; }
+  .xhair { width:15px; height:15px; position:relative; }
+  .xhair::before,.xhair::after { content:''; position:absolute; background:var(--acc); }
+  .xhair::before { width:1px; height:100%; left:50%; }
+  .xhair::after  { width:100%; height:1px; top:50%; }
+  .htag { font-size:10px; font-weight:500; letter-spacing:.12em; color:var(--tdim); }
+  .htag b { color:var(--tmid); font-weight:500; }
+  /* version badge — hidden on small screens */
+  .hb.hver { display:none; }
+
+  /* Subject info — always visible, truncates gracefully */
+  .hsub  { flex:1; min-width:0; padding:0 12px; flex-direction:column; align-items:flex-start; justify-content:center; border-right:1px solid var(--border); overflow:hidden; }
+  .hlbl  { font-size:8px; letter-spacing:.18em; color:var(--tdim); margin-bottom:2px; }
+  .hnam  { font-size:11px; font-weight:500; color:var(--tbrt); letter-spacing:.03em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  .riskm { color:#c4984a; }
+
+  /* Metrics panel — hidden on mobile */
+  .hmet  { display:none; }
+
+  /* Desktop control buttons in header — hidden on mobile */
+  .hctr  { display:none; }
+
+  /* ── BOTTOM TOOLBAR (mobile primary controls) ── */
+  #toolbar {
+    position:fixed; bottom:var(--sh); left:0; right:0;
+    height:var(--tb,44px);
+    background:var(--surf); border-top:1px solid var(--border);
+    display:flex; align-items:stretch; z-index:1000;
+  }
+  .tbtn {
+    flex:1; border:none; border-right:1px solid var(--border);
+    background:transparent; color:var(--tdim);
+    font-family:var(--mono); font-size:8px; font-weight:500;
+    letter-spacing:.08em; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px; padding:0 4px;
+    transition:color .12s, background .12s;
+    -webkit-tap-highlight-color:transparent;
+    min-width:0;
+  }
+  .tbtn:last-child { border-right:none; }
+  .tbtn:active { background:var(--surf2); }
+  .tbtn.on { color:var(--acc); }
+  .tbtn.on .tbi { color:var(--acc); }
+  .tbtn.pdf { color:var(--acc); }
+  .tbi { font-size:14px; line-height:1; color:var(--tmid); }
+  .tbl { font-size:7px; letter-spacing:.1em; }
+
+  /* Dimmed overlay for sidebar/panel on mobile */
+  #mob-dim {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.55); z-index:490;
+  }
+  #mob-dim.on { display:block; }
+
+  /* ── GRAPH ── */
+  #gwrap {
+    position:fixed;
+    top:var(--hh);
+    bottom:calc(var(--sh) + var(--tb,44px));
+    left:0; right:0;
+  }
+  #g3d { width:100%; height:100%; }
+
+  /* ── SIDEBAR ── */
+  #sb {
+    position:fixed; top:var(--hh); left:0;
+    bottom:calc(var(--sh) + var(--tb,44px));
+    width:var(--sw); background:var(--surf);
+    border-right:1px solid var(--border);
+    z-index:500; display:flex; flex-direction:column;
+    overflow:hidden; transition:transform .25s ease;
+    /* hidden by default on mobile */
+    transform:translateX(calc(-1 * var(--sw)));
+  }
+  #sb.open { transform:translateX(0); }
+  .ssec  { border-bottom:1px solid var(--border); padding:12px 14px; flex-shrink:0; }
+  .stit  { font-size:8px; font-weight:500; letter-spacing:.18em; color:var(--tdim); margin-bottom:10px; }
+  #srch  { width:100%; background:var(--surf2); border:1px solid var(--border); color:var(--t); font-family:var(--mono); font-size:16px; padding:8px 10px; outline:none; transition:border-color .12s; border-radius:0; -webkit-appearance:none; }
+  #srch::placeholder { color:var(--tdim); }
+  #srch:focus { border-color:var(--bract); }
+  #filt  { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:8px 14px 10px; }
+  #filt::-webkit-scrollbar { width:2px; }
+  #filt::-webkit-scrollbar-thumb { background:var(--brmid); }
+  .fi    { display:flex; align-items:center; gap:8px; padding:7px 0; cursor:pointer; font-size:10px; color:var(--tmid); user-select:none; transition:color .12s; -webkit-tap-highlight-color:transparent; }
+  .fi:active { color:var(--t); }
+  .fck   { width:14px; height:14px; border:1px solid; display:grid; place-items:center; flex-shrink:0; transition:background .12s; }
+  .fck.on::after { content:'✓'; font-size:8px; color:#0b0d12; }
+  .fdot  { width:7px; height:7px; border-radius:50%; flex-shrink:0; opacity:.75; }
+  .fcnt  { margin-left:auto; font-size:9px; color:var(--tdim); }
+  .sgrid { display:grid; grid-template-columns:1fr 1fr; gap:1px; border-top:1px solid var(--border); flex-shrink:0; }
+  .sst   { background:var(--surf2); padding:10px 12px; }
+  .ssl   { font-size:8px; letter-spacing:.14em; color:var(--tdim); margin-bottom:4px; font-weight:500; }
+  .ssv   { font-size:20px; font-weight:300; color:var(--t); letter-spacing:-.02em; }
+
+  /* ── DETAIL PANEL ── */
+  #pnl {
+    position:fixed; top:var(--hh); right:0;
+    bottom:calc(var(--sh) + var(--tb,44px));
+    width:min(285px, 92vw);
+    background:var(--surf); border-left:1px solid var(--border);
+    z-index:500; display:flex; flex-direction:column;
+    overflow:hidden;
+    transform:translateX(100%);
+    transition:transform .25s cubic-bezier(.16,1,.3,1);
+  }
+  #pnl.on { transform:translateX(0); }
+  .phdr  { border-bottom:1px solid var(--border); padding:11px 14px; display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .pbdg  { font-size:8px; font-weight:500; letter-spacing:.16em; padding:3px 7px; border:1px solid; opacity:.8; }
+  .pclx  { margin-left:auto; background:none; border:none; color:var(--tdim); cursor:pointer; font-size:11px; font-family:var(--mono); font-weight:500; letter-spacing:.1em; transition:color .12s; padding:6px 4px; -webkit-tap-highlight-color:transparent; }
+  .pnam  { font-size:12px; font-weight:500; color:var(--tbrt); padding:11px 14px; border-bottom:1px solid var(--border); word-break:break-all; flex-shrink:0; line-height:1.4; }
+  .pbdy  { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .pbdy::-webkit-scrollbar { width:2px; }
+  .pbdy::-webkit-scrollbar-thumb { background:var(--brmid); }
+  .psec  { padding:11px 14px; border-bottom:1px solid var(--border); }
+  .pstit { font-size:8px; font-weight:500; letter-spacing:.18em; color:var(--tdim); margin-bottom:10px; }
+  .dr    { display:flex; gap:10px; margin-bottom:6px; font-size:10px; line-height:1.5; }
+  .dk    { color:var(--tdim); min-width:86px; flex-shrink:0; font-size:9px; }
+  .dv    { color:var(--t); word-break:break-all; }
+  .dv.hi { color:var(--acc); }
+  .dv.rd { color:var(--red); }
+  .cnns  { display:flex; flex-direction:column; gap:2px; }
+  .ci    { display:flex; align-items:center; gap:9px; font-size:10px; padding:8px 8px; cursor:pointer; transition:background .12s; border-left:2px solid transparent; -webkit-tap-highlight-color:transparent; }
+  .ci:active { background:var(--surf2); border-left-color:var(--brmid); }
+  .cdot  { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  .ctyp  { color:var(--tdim); font-size:9px; margin-top:1px; }
+
+  /* ── STATUS BAR ── */
+  #stat {
+    position:fixed; bottom:0; left:0; right:0; height:var(--sh);
+    background:var(--surf); border-top:1px solid var(--border);
+    display:flex; align-items:center; font-size:9px;
+    color:var(--tdim); letter-spacing:.07em; z-index:1000; overflow:hidden;
+  }
+  .si    { padding:0 10px; border-right:1px solid var(--border); height:100%; display:flex; align-items:center; gap:5px; white-space:nowrap; flex-shrink:0; }
+  .si span { color:var(--tmid); }
+  #sel   { flex:1; padding:0 10px; color:var(--tmid); font-size:9px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* Hide verbose status items on mobile */
+  .si-hide-mob { display:none; }
+  #stat-clk { margin-left:auto; border-left:1px solid var(--border); border-right:none; flex-shrink:0; }
+
+  /* ── TRANSITION OVERLAY ── */
+  #ov { position:fixed; inset:0; background:var(--bg); opacity:0; pointer-events:none; z-index:800; transition:opacity .28s ease; }
+  #ov.flash { opacity:.5; }
+
+  /* ── LEGEND — hidden on mobile by default ── */
+  #legend {
+    display:none;
+    position:fixed; bottom:calc(var(--sh) + var(--tb,44px) + 8px); right:12px;
+    background:var(--surf); border:1px solid var(--border);
+    padding:10px 12px; z-index:600; min-width:130px;
+  }
+  .leg-title { font-size:8px; letter-spacing:.16em; color:var(--tdim); margin-bottom:8px; font-weight:500; }
+  .leg-row   { display:flex; align-items:center; gap:7px; margin-bottom:5px; font-size:9px; color:var(--tmid); }
+  .leg-dot   { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .leg-hub   { width:7px; height:7px; flex-shrink:0; border:1px solid; background:transparent; }
+
+  /* ════════════════════════════════════════════════
+     TABLET / DESKTOP  (≥ 700px)
+     Restore the full desktop layout
+  ════════════════════════════════════════════════ */
+  @media (min-width:700px) {
+    :root { --tb: 0px; }
+
+    /* Restore all header sections */
+    .hb.hver    { display:flex; }
+    .hmet       { display:flex; font-size:9px; color:var(--tdim); line-height:1.9; letter-spacing:.06em; flex-direction:column; align-items:flex-start; justify-content:center; }
+    .hmet span  { color:var(--tmid); }
+    .hctr       { display:flex; height:100%; }
+    .sdot { display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--grn); margin-right:5px; opacity:.8; }
+
+    /* Desktop control buttons */
+    .cbtn { height:100%; padding:0 14px; border:none; border-left:1px solid var(--border); background:transparent; color:var(--tdim); font-family:var(--mono); font-size:9px; font-weight:500; letter-spacing:.1em; cursor:pointer; transition:color .12s, background .12s; }
+    .cbtn:hover { background:var(--surf2); color:var(--tmid); }
+    .cbtn.on  { color:var(--acc); }
+    .cbtn.mode { background:var(--surf2); color:var(--tbrt); border-color:var(--brmid); font-weight:600; letter-spacing:.14em; }
+    .cbtn.mode:hover { background:rgba(196,168,130,.1); color:var(--acc); }
+
+    /* Hide mobile toolbar */
+    #toolbar    { display:none; }
+    #mob-dim    { display:none !important; }
+
+    /* Restore graph bounds */
+    #gwrap      { bottom:var(--sh); }
+
+    /* Sidebar: hidden by default on desktop too, toggled via FILTERS */
+    #sb         { bottom:var(--sh); transform:translateX(calc(-1 * var(--sw))); }
+    #sb.open    { transform:translateX(0); }
+
+    /* Panel full height */
+    #pnl        { bottom:var(--sh); width:285px; }
+
+    /* Status bar — show all items */
+    .si-hide-mob { display:flex; }
+
+    /* Legend visible on desktop */
+    #legend     { display:block; bottom:calc(var(--sh) + 12px); }
+
+    /* Search input: revert zoom-preventing font-size */
+    #srch { font-size:11px; padding:6px 10px; }
+    .fi   { padding:4px 0; }
+    .ci   { padding:6px 8px; }
+  }
+
+  @media (min-width:1000px) {
+    .hnam { font-size:12px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div class="hb logo"><div class="xhair"></div></div>
+  <div class="hb hver"><span class="htag"><b>OSG</b> · 3.0.0</span></div>
+  <div class="hb hsub">
+    <span class="hlbl">TARGET SUBJECT</span>
+    <span class="hnam">MARCUS T. WEBB &nbsp;·&nbsp; DOB 1990-03-14 &nbsp;·&nbsp; RISK <span class="riskm">MEDIUM</span></span>
+  </div>
+  <div class="hb hmet">
+    <span><span class="sdot"></span>LIVE SESSION</span>
+    <span>NODES <span id="hdr-n">—</span> &nbsp;·&nbsp; EDGES <span id="hdr-l">—</span></span>
+  </div>
+  <div class="hctr">
+    <button class="cbtn on"  id="b-orbit"  onclick="toggleOrbit()">ORBIT</button>
+    <button class="cbtn on"  id="b-flow"   onclick="toggleFlow()">FLOW</button>
+    <button class="cbtn"     id="b-sb"     onclick="toggleSidebar()">FILTERS</button>
+    <button class="cbtn"                   onclick="Graph.zoomToFit(700,60)">FIT</button>
+    <button class="cbtn mode" id="b-mode"  onclick="toggleMode()">3D → 2D</button>
+    <button class="cbtn" id="b-pdf" onclick="exportPDF()" style="color:var(--acc);letter-spacing:.12em;">↓ REPORT</button>
+  </div>
+</div>
+
+<!-- Mobile bottom toolbar — all controls accessible on small screens -->
+<div id="toolbar">
+  <button class="tbtn on" id="tb-orbit" onclick="toggleOrbit()">
+    <span class="tbi">⊙</span><span class="tbl">ORBIT</span>
+  </button>
+  <button class="tbtn on" id="tb-flow" onclick="toggleFlow()">
+    <span class="tbi">≈</span><span class="tbl">FLOW</span>
+  </button>
+  <button class="tbtn" id="tb-sb" onclick="toggleSidebar()">
+    <span class="tbi">⊞</span><span class="tbl">FILTERS</span>
+  </button>
+  <button class="tbtn" onclick="Graph.zoomToFit(700,60)">
+    <span class="tbi">⤢</span><span class="tbl">FIT</span>
+  </button>
+  <button class="tbtn" id="tb-mode" onclick="toggleMode()">
+    <span class="tbi">⧈</span><span class="tbl" id="tb-mode-lbl">3D→2D</span>
+  </button>
+  <button class="tbtn pdf" onclick="exportPDF()">
+    <span class="tbi">↓</span><span class="tbl">REPORT</span>
+  </button>
+</div>
+
+<!-- Dim overlay for mobile panels -->
+<div id="mob-dim" onclick="closeMobDim()"></div>
+
+<div id="sb">
+  <div class="ssec"><div class="stit">SEARCH</div><input id="srch" type="text" placeholder="name, category, or detail…" oninput="doSearch(this.value)"></div>
+  <div class="ssec"><div class="stit">CATEGORIES</div></div>
+  <div id="filt"></div>
+  <div class="sgrid">
+    <div class="sst"><div class="ssl">NODES</div><div class="ssv" id="st-n">—</div></div>
+    <div class="sst"><div class="ssl">EDGES</div><div class="ssv" id="st-l">—</div></div>
+    <div class="sst"><div class="ssl">BREACHES</div><div class="ssv" style="color:var(--red)" id="st-b">—</div></div>
+    <div class="sst"><div class="ssl">ASSOCIATES</div><div class="ssv" id="st-a">—</div></div>
+  </div>
+</div>
+
+<div id="gwrap">
+  <div id="g3d"></div>
+</div>
+
+<div id="pnl">
+  <div class="phdr">
+    <div class="pbdg" id="p-badge">—</div>
+    <button class="pclx" onclick="closePanel()">CLOSE ✕</button>
+  </div>
+  <div class="pnam" id="p-name">—</div>
+  <div class="pbdy" id="p-body"></div>
+</div>
+
+<div id="stat">
+  <div class="si si-hide-mob">OSG OSINT SYSTEM</div>
+  <div class="si si-hide-mob">SESSION <span>C2F9A1</span></div>
+  <div id="sel" class="si">SELECT A NODE</div>
+  <div class="si" id="stat-clk"><span id="clk">—</span></div>
+</div>
+
+<div id="legend">
+  <div class="leg-title">LEGEND</div>
+  <div class="leg-row"><div style="width:14px;height:14px;border-radius:50%;border:1.5px solid #c4a882;flex-shrink:0;background:rgba(196,168,130,.12)"></div> Subject</div>
+  <div class="leg-row"><div class="leg-hub" style="border-color:#8090a8;width:10px;height:6px;background:rgba(80,90,140,.18)"></div> Category Hub</div>
+  <div class="leg-row"><div class="leg-dot" style="background:#4a5060"></div> Data Node</div>
+  <div class="leg-row" style="margin-top:6px;color:var(--tdim)"><div style="width:20px;height:1px;background:rgba(255,255,255,0.25);flex-shrink:0"></div> Tree Link</div>
+  <div class="leg-row" style="color:var(--tdim)"><div style="width:20px;height:1px;background:rgba(255,255,255,0.07);flex-shrink:0;border-top:1px dashed rgba(255,255,255,0.15)"></div> Cross Link</div>
+</div>
+
+<div id="ov"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three-spritetext@1.9.5/dist/three-spritetext.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CATEGORY DEFINITIONS
+// ═══════════════════════════════════════════════════════════════
+const CAT = {
+  subject:    { color:'#c4a882', label:'Subject'       },
+  identity:   { color:'#a09060', label:'Identity'      },
+  contact:    { color:'#7888a0', label:'Contact'       },
+  social:     { color:'#887898', label:'Social Media'  },
+  location:   { color:'#708878', label:'Location'      },
+  domain:     { color:'#907060', label:'Domain / Web'  },
+  associate:  { color:'#607890', label:'Associate'     },
+  breach:     { color:'#8a5050', label:'Data Breach'   },
+  device:     { color:'#6a7860', label:'Device'        },
+  financial:  { color:'#708860', label:'Financial'     },
+  employment: { color:'#507080', label:'Employment'    },
+  vehicle:    { color:'#907060', label:'Vehicle'       },
+  metadata:   { color:'#706080', label:'Metadata'      },
+};
+
+const SUBJECT_NODE = {
+  id:'subject', name:'marcus.webb', type:'subject', isSubject:true,
+  detail:{ fullName:'Marcus Tyler Webb', dob:'1990-03-14', age:'35', nationality:'US Citizen', ssn:'***-**-4471', riskScore:'62/100', flags:'3 confirmed breaches · crypto wallets · VPS server · 8 aliases identified' }
+};
+
+const HUB_NODES = Object.keys(CAT)
+  .filter(k => k !== 'subject')
+  .map(k => ({ id:`hub-${k}`, name:CAT[k].label, type:k, isHub:true }));
+
+const DATA_NODES = [
+  { id:'id-m4rcus',    name:'m4rcus_w',        type:'identity', detail:{ username:'m4rcus_w',     confidence:'HIGH',      platforms:'GitHub · Reddit · Steam',       firstSeen:'2011-08-03', lastSeen:'2025-02-20' }},
+  { id:'id-toxic',     name:'toxicwebb88',      type:'identity', detail:{ username:'toxicwebb88',  confidence:'HIGH',      platforms:'Twitter · Discord · Twitch',     firstSeen:'2008-05-19', lastSeen:'2024-11-15' }},
+  { id:'id-mwebb-dev', name:'mwebb_dev',        type:'identity', detail:{ username:'mwebb_dev',    confidence:'CONFIRMED', platforms:'Upwork · Medium · npm',          firstSeen:'2018-01-10', lastSeen:'2025-03-01' }},
+  { id:'id-mt-webb',   name:'mt.webb',          type:'identity', detail:{ username:'mt.webb',      confidence:'CONFIRMED', platforms:'Apex Digital SSO · Slack',       firstSeen:'2021-03-01' }},
+  { id:'id-marcus619', name:'marcus619',         type:'identity', detail:{ username:'marcus619',    confidence:'MEDIUM',    platforms:'Instagram · TikTok · Hinge',     firstSeen:'2019-06-14' }},
+  { id:'id-webbdev',   name:'webbdev',           type:'identity', detail:{ username:'webbdev',      confidence:'HIGH',      platforms:'Stack Overflow · HackerNews',    firstSeen:'2016-09-08' }},
+  { id:'id-mwebb619',  name:'mwebb_619',         type:'identity', detail:{ username:'mwebb_619',    confidence:'CONFIRMED', platforms:'Venmo · Cash App · Zelle',       firstSeen:'2020-03-15' }},
+  { id:'id-m-webb',    name:'m_webb',            type:'identity', detail:{ username:'m_webb',       confidence:'LOW',       platforms:'Old forums · Wayback Machine',   firstSeen:'2006-07-22', lastSeen:'2014-05-03' }},
+  { id:'em-gmail',     name:'marcus.webb@gmail.com',    type:'contact', detail:{ provider:'Google / Gmail',     status:'ACTIVE',   breaches:'3', linkedTo:'LinkedIn · Facebook · Instagram · Canva' }},
+  { id:'em-proton',    name:'mwebb88@protonmail.com',   type:'contact', detail:{ provider:'ProtonMail (E2E)',   status:'ACTIVE',   breaches:'0', linkedTo:'Domain reg · VPS · 2FA recovery' }},
+  { id:'em-hotmail',   name:'mwebb619@hotmail.com',     type:'contact', detail:{ provider:'Microsoft Hotmail', status:'STALE',    breaches:'2', last:'2016 est.' }},
+  { id:'em-apex',      name:'m.webb@apex-digital.com',  type:'contact', detail:{ provider:'Apex Digital corp', status:'ACTIVE',   since:'2021-04' }},
+  { id:'em-nova',      name:'m.webb@novatech.io',       type:'contact', detail:{ provider:'NovaTech corp',     status:'INACTIVE', period:'2018–2021', note:'Exposed in GitHub commits' }},
+  { id:'ph-primary',   name:'+1 619-555-0147',          type:'contact', detail:{ carrier:'T-Mobile USA',       status:'ACTIVE',   type:'Mobile', geo:'San Diego CA', linkedTo:'WhatsApp · Signal · Venmo' }},
+  { id:'ph-secondary', name:'+1 760-555-0293',          type:'contact', detail:{ carrier:'Verizon Wireless',   status:'STALE',    type:'Mobile', geo:'Chula Vista CA' }},
+  { id:'ph-work',      name:'+1 619-555-0891',          type:'contact', detail:{ carrier:'RingCentral VoIP',   status:'ACTIVE',   type:'Work VoIP', linkedTo:'Apex Digital directory' }},
+  { id:'whatsapp',     name:'WhatsApp: primary',         type:'contact', detail:{ platform:'WhatsApp (Meta)',   status:'ACTIVE',   encryption:'E2E', linked:'+1 619-555-0147' }},
+  { id:'s-twitter',  name:'@toxicwebb',            type:'social', detail:{ platform:'Twitter / X',  followers:'1,204', joined:'Aug 2010', status:'ACTIVE', bio:'"dev / builder / crypto curious"' }},
+  { id:'s-linkedin', name:'linkedin/marcuswebb',   type:'social', detail:{ platform:'LinkedIn',     connections:'312', title:'Sr Full Stack Dev @ Apex', status:'ACTIVE' }},
+  { id:'s-github',   name:'github/m4rcus',         type:'social', detail:{ platform:'GitHub',       repos:'34 public', joined:'2013-07-02', status:'ACTIVE', lastPush:'2025-03-08' }},
+  { id:'s-reddit',   name:'u/toxicwebb88',         type:'social', detail:{ platform:'Reddit',       karma:'14,229', joined:'2012-11', status:'ACTIVE', topSubs:'r/personalfinance r/CryptoCurrency r/sandiego' }},
+  { id:'s-ig',       name:'@marcuswebb_sd',        type:'social', detail:{ platform:'Instagram',    followers:'489', status:'ACTIVE', note:'Pre-2022 photos have GPS EXIF: 32.77°N 117.21°W' }},
+  { id:'s-fb',       name:'fb/marcus.webb.619',    type:'social', detail:{ platform:'Facebook',     status:'SEMI-ACTIVE', privacy:'Friends only (partial)' }},
+  { id:'s-discord',  name:'toxicwebb#4421',        type:'social', detail:{ platform:'Discord',      status:'ACTIVE', servers:'Dev · crypto communities', note:'Appears in 2023 Discord dump' }},
+  { id:'s-tiktok',   name:'@m4rcusw',              type:'social', detail:{ platform:'TikTok',       followers:'2,108', joined:'2021-12', status:'ACTIVE' }},
+  { id:'s-youtube',  name:'MarcusBuilds',          type:'social', detail:{ platform:'YouTube',      subscribers:'891', joined:'2017-09', status:'INACTIVE', note:'Stopped 2023' }},
+  { id:'s-so',       name:'webbdev (Stack Overflow)',type:'social',detail:{ platform:'Stack Overflow',rep:'4,821', joined:'2016-09', status:'ACTIVE', topTags:'JavaScript · React · Node.js' }},
+  { id:'s-twitch',   name:'toxicwebb_tv',          type:'social', detail:{ platform:'Twitch',       followers:'312', status:'INACTIVE', note:'Last streamed 2022' }},
+  { id:'s-medium',   name:'@mwebb_dev (Medium)',   type:'social', detail:{ platform:'Medium',       articles:'7', joined:'2019-06', status:'INACTIVE', topics:'JavaScript · Web performance · freelancing' }},
+  { id:'loc-cur',  name:'4821 Mission Ave, SD',        type:'location', detail:{ address:'4821 Mission Ave, San Diego CA 92116', status:'CURRENT (est.)', source:'Voter reg · USPS NCOA · Amazon metadata', gps:'32.7611°N 117.1929°W', since:'2022 est.' }},
+  { id:'loc-prev', name:'1102 E St, Chula Vista',      type:'location', detail:{ address:'1102 E St, Chula Vista CA 91910',      status:'FORMER', source:'Prior voter reg · secondary phone carrier', period:'2018–2022' }},
+  { id:'loc-den',  name:'Denver CO (former)',           type:'location', detail:{ address:'Denver CO 80205', status:'FORMER', source:'LinkedIn · Reddit post geotag', period:'2015–2018' }},
+  { id:'ip-spec',  name:'73.153.xx.xx (Spectrum)',     type:'location', detail:{ ip:'73.153.xx.xx', isp:'Charter Spectrum', org:'AS20115', geo:'San Diego CA 92116', type:'Residential Broadband' }},
+  { id:'ip-cf',    name:'104.28.xx.xx (Cloudflare)',   type:'location', detail:{ ip:'104.28.xx.xx', isp:'Cloudflare', org:'AS13335', type:'Reverse Proxy', note:'Masks origin of mwebb-dev.com' }},
+  { id:'ip-vps',   name:'45.33.xx.xx (DigitalOcean)', type:'location', detail:{ ip:'45.33.xx.xx', isp:'DigitalOcean', geo:'New York NY', type:'VPS', openPorts:'22(SSH) 443(HTTPS)' }},
+  { id:'loc-wifi', name:'SSID: MarcusNet_5G',          type:'location', detail:{ ssid:'MarcusNet_5G', bssid:'A4:11:62:**:**:**', encryption:'WPA3', source:'Wigle.net wardriving DB', geo:'Mission Ave corridor SD' }},
+  { id:'loc-cell', name:'Cell Zone SD-4421',            type:'location', detail:{ tower:'SD-4421', carrier:'T-Mobile', geo:'Mission Hills / North Park SD', confidence:'MEDIUM' }},
+  { id:'loc-mb',   name:'GPS Cluster: Mission Bay',    type:'location', detail:{ lat:'32.7714°N', lng:'117.2140°W', source:'Instagram EXIF · Reddit geopost · vehicle sighting', frequency:'HIGH — consistent weekend presence' }},
+  { id:'loc-apex', name:'GPS Cluster: Apex Digital',   type:'location', detail:{ address:'Apex Digital Solutions, Kearny Mesa SD', frequency:'Weekdays 9AM–6PM', confidence:'HIGH' }},
+  { id:'loc-gym',  name:'GPS Cluster: 24Hr Fitness',   type:'location', detail:{ address:'24 Hour Fitness, Mission Valley SD', frequency:'~3x/week evenings', firstSeen:'2023' }},
+  { id:'d-mwebb',   name:'mwebb-dev.com',        type:'domain', detail:{ registrar:'Namecheap', registered:'2019-04-11', expires:'2026-04-11', status:'ACTIVE', registrant:'mwebb88@protonmail.com (WHOIS privacy)', hosting:'Vercel' }},
+  { id:'d-toxic',   name:'toxicwebb.net',         type:'domain', detail:{ registrar:'GoDaddy', registered:'2014-08-30', status:'EXPIRED (2021)', note:'14 Wayback snapshots 2016–2020' }},
+  { id:'d-api',     name:'api.mwebb-dev.com',     type:'domain', detail:{ type:'Subdomain', parent:'mwebb-dev.com', status:'ACTIVE', note:'No auth on /health (exposes version info)' }},
+  { id:'d-ghpages', name:'m4rcus.github.io',      type:'domain', detail:{ type:'GitHub Pages', status:'ACTIVE', content:'Portfolio', lastUpdated:'2025-02' }},
+  { id:'d-mwebb2',  name:'mwebb.dev',             type:'domain', detail:{ registrar:'Cloudflare Registrar', registered:'2023-01-15', status:'ACTIVE', note:'Redirects to mwebb-dev.com. Hosted on VPS.' }},
+  { id:'d-npm',     name:'npmjs/@m4rcus',         type:'domain', detail:{ platform:'NPM Registry', packages:'3 public', downloads:'~1,200/month', note:'package.json exposes marcus.webb@gmail.com' }},
+  { id:'d-paste',   name:'pastebin/mwebb88',      type:'domain', detail:{ platform:'Pastebin', public_pastes:'4', note:'One paste leaked a partial API key (rotated).' }},
+  { id:'a-sarah',   name:'Sarah L. Chen',    type:'associate', detail:{ relationship:'Partner est. 2021', source:'Instagram tags · shared address 2023', dob:'1992-07-22 (est.)', occupation:'Nurse Practitioner', employer:'Sharp Memorial Hospital SD', risk:'LOW' }},
+  { id:'a-derek',   name:'Derek C. Webb',    type:'associate', detail:{ relationship:'Sibling (brother)', source:'Family court record · FB family tag', location:'San Diego CA', risk:'LOW' }},
+  { id:'a-paul',    name:'Paul A. Moretti',  type:'associate', detail:{ relationship:'Colleague — Apex Digital', source:'LinkedIn mutual · GitHub collaborator (4 repos)', occupation:'Sr DevOps @ Apex Digital', risk:'LOW' }},
+  { id:'a-kristie', name:'Kristie Webb',     type:'associate', detail:{ relationship:'Mother', source:'Public records · voter registration', location:'Chula Vista CA' }},
+  { id:'a-james',   name:'James R. Webb',    type:'associate', detail:{ relationship:'Father (estranged)', source:'Court records (divorce 2001)', risk:'LOW' }},
+  { id:'a-alex',    name:'Alex T. Nguyen',   type:'associate', detail:{ relationship:'Friend', source:'Reddit mutual · Instagram mutual · Discord log (2023 dump)', location:'San Diego CA', risk:'LOW' }},
+  { id:'a-rachel',  name:'Rachel Kim',       type:'associate', detail:{ relationship:'Former coworker (NovaTech)', source:'LinkedIn mutual · shared GitHub org', occupation:'Software Engineer @ StartupCo Denver', risk:'LOW' }},
+  { id:'a-dan',     name:'Dan Whitfield',    type:'associate', detail:{ relationship:'GitHub collaborator', source:'5 merged PRs on public repos', username:'dwhitfield_dev', location:'Portland OR', risk:'LOW' }},
+  { id:'a-chris',   name:'Chris Okafor',     type:'associate', detail:{ relationship:'Discord community', source:'2023 Discord dump — shared server + DMs', handle:'cokafor#7712', risk:'UNKNOWN' }},
+  { id:'a-lisa',    name:'Lisa Huang',       type:'associate', detail:{ relationship:'Colleague — Apex Digital', source:'LinkedIn mutual · Instagram follow', occupation:'UX Designer @ Apex Digital', risk:'LOW' }},
+  { id:'e-apex',  name:'Apex Digital Solutions', type:'employment', detail:{ title:'Senior Full Stack Developer', type:'W-2', location:'San Diego CA (Hybrid)', started:'2021-04', status:'CURRENT', revenue:'$12M est. 2024' }},
+  { id:'e-nova',  name:'NovaTech Corp',           type:'employment', detail:{ title:'Software Engineer II', type:'W-2', location:'Denver CO', started:'2018-02', ended:'2021-03', status:'FORMER' }},
+  { id:'e-free',  name:'Upwork (Freelancer)',      type:'employment', detail:{ profile:'upwork.com/fl/mwebb_dev', type:'1099/Contract', status:'ACTIVE', since:'2019', earnings:'$80K+ est. lifetime' }},
+  { id:'e-ts',    name:'TechStart LLC',            type:'employment', detail:{ title:'Contract Developer', type:'1099', location:'Denver CO', started:'2019-06', ended:'2019-11', status:'FORMER' }},
+  { id:'e-self',  name:'Self / OSS Projects',      type:'employment', detail:{ type:'Self-employed', projects:'mwebb-dev.com · npm packages · GitHub repos', income:'Est. $15K/yr passive + freelance', since:'2019' }},
+  { id:'br-linkedin', name:'LinkedIn 2012',      type:'breach', detail:{ date:'2012-06-05', records:'117M', exposed:'Email + SHA-1 unsalted hash', confirmed:'marcus.webb@gmail.com', severity:'HIGH' }},
+  { id:'br-adobe',    name:'Adobe 2013',         type:'breach', detail:{ date:'2013-10-04', records:'153M', exposed:'Email + encrypted password + hint', confirmed:'mwebb619@hotmail.com', severity:'MEDIUM', hint:'"olddog" — password pattern indicator' }},
+  { id:'br-myspace',  name:'MySpace 2016',       type:'breach', detail:{ date:'2016-05-31', records:'360M', exposed:'Email + SHA-1/MD5 hash', confirmed:'m_webb (legacy account)', severity:'LOW' }},
+  { id:'br-canva',    name:'Canva 2019',         type:'breach', detail:{ date:'2019-05-24', records:'137M', exposed:'Email + bcrypt hash + partial card', confirmed:'marcus.webb@gmail.com', severity:'MEDIUM' }},
+  { id:'br-discord',  name:'Discord Dump 2023', type:'breach', detail:{ date:'2023-07-11', exposed:'Username + message history + server list', confirmed:'toxicwebb#4421', severity:'LOW' }},
+  { id:'br-twitter',  name:'Twitter Enum 2022', type:'breach', detail:{ date:'2022-01-04', records:'5.4M', exposed:'Email → username enumeration', confirmed:'marcus.webb@gmail.com → @toxicwebb', severity:'MEDIUM' }},
+  { id:'br-gravatar', name:'Gravatar Scrape 2020',type:'breach',detail:{ date:'2020-10-03', records:'114M', exposed:'Email + username + profile metadata', confirmed:'marcus.webb@gmail.com', severity:'LOW' }},
+  { id:'br-deezer',   name:'Deezer 2022',        type:'breach', detail:{ date:'2022-11-07', records:'229M', exposed:'Email + name + DOB + gender', confirmed:'mwebb619@hotmail.com', severity:'MEDIUM', note:'DOB confirms 1990-03-14' }},
+  { id:'dev-mac',     name:'MacBook Pro M2',       type:'device', detail:{ device:'Apple MacBook Pro 14" M2 Pro', hostname:'marcuss-mbp (mDNS leak)', os:'macOS Sonoma 14.x', source:'mDNS broadcast · GitHub CI metadata · PDF author field' }},
+  { id:'dev-iphone',  name:'iPhone 15 Pro',         type:'device', detail:{ device:'Apple iPhone 15 Pro', imei_partial:'354****** (carrier)', carrier:'T-Mobile', source:'Carrier record · iCloud metadata · Instagram EXIF' }},
+  { id:'dev-router',  name:'Netgear R7000 Router',  type:'device', detail:{ device:'Netgear Nighthawk R7000', mac:'A4:11:62:**:**:**', source:'Shodan passive scan (2024)', openPorts:'None (firewall active)' }},
+  { id:'dev-ipad',    name:'iPad Air 5th Gen',       type:'device', detail:{ device:'Apple iPad Air (5th gen)', source:'iCloud family sharing metadata · Safari UA in web logs' }},
+  { id:'dev-raspi',   name:'Raspberry Pi 4',         type:'device', detail:{ device:'Raspberry Pi 4 4GB', hostname:'mwebb-pi (mDNS)', ip:'45.33.xx.xx (VPS tunnel)', services:'nginx · PostgreSQL · private API', source:'Shodan Feb 2025' }},
+  { id:'dev-android', name:'Samsung Tab A8',         type:'device', detail:{ device:'Samsung Galaxy Tab A8', note:'Linked to Chula Vista address period. T-Mobile prepaid.', lastSeen:'2022 est.' }},
+  { id:'fin-eth',      name:'ETH: 0x7a3f…d8c2',      type:'financial', detail:{ chain:'Ethereum', address:'0x7a3f1b9e0fa3c28d54e776f93d02a1d8b4ffd8c2', balance:'~1.42 ETH ($3,800)', txCount:'67', lastTx:'2025-01-29', source:'Linked from @toxicwebb Twitter (2021)' }},
+  { id:'fin-btc',      name:'BTC: 1KxG9…mR5p',        type:'financial', detail:{ chain:'Bitcoin', address:'1KxG9fBzTLw7QHkpCdP3sUYvLmR5pWq4NE', balance:'~0.08 BTC ($6,400)', txCount:'12', source:'Forum signature bitcointalk (2017 archive)' }},
+  { id:'fin-venmo',    name:'Venmo @mwebb_619',        type:'financial', detail:{ platform:'Venmo', handle:'@mwebb_619', status:'ACTIVE', transactions:'Public feed visible (30-day)', linkedPhone:'+1 619-555-0147' }},
+  { id:'fin-paypal',   name:'PayPal: marcus.webb@gmail',type:'financial',detail:{ platform:'PayPal', status:'ACTIVE', note:'Linked to Upwork payouts' }},
+  { id:'fin-coinbase', name:'Coinbase (inferred)',      type:'financial', detail:{ platform:'Coinbase', confidence:'MEDIUM', source:'Coinbase referral link in GitHub commit (2021)' }},
+  { id:'fin-cashapp',  name:'Cash App $mwebb619',       type:'financial', detail:{ platform:'Cash App', cashtag:'$mwebb619', status:'ACTIVE', source:'Found in Reddit payment thread (2022)' }},
+  { id:'veh-tacoma', name:'2021 Toyota Tacoma',   type:'vehicle', detail:{ vehicle:'Toyota Tacoma TRD Off-Road', color:'Magnetic Gray Metallic', plate:'CA — 8DHH234 (est.)', vin:'3TMCZ5AN*M**', registered:'San Diego County', source:'Instagram (plate visible) · ALPR sighting 2024' }},
+  { id:'veh-civic',  name:'2018 Honda Civic',      type:'vehicle', detail:{ vehicle:'Honda Civic EX-L', color:'Sonic Gray Pearl', note:'Registered at prior Chula Vista address. Likely sold 2022.', source:'DMV record · Chula Vista parking citation' }},
+  { id:'m-exif',     name:'EXIF GPS: Mission Bay',      type:'metadata', detail:{ type:'EXIF/GPS Metadata', source:'Instagram @marcuswebb_sd (pre-2022)', coords:'32.7714°N 117.2140°W', location:'Mission Bay Aquatic Park SD', device:'iPhone 13 Pro (EXIF)', datetime:'2021-09-18 14:32 PDT' }},
+  { id:'m-ghemail',  name:'GitHub Commit Email Leak',    type:'metadata', detail:{ type:'Git Commit Metadata', exposed:'m.webb@novatech.io · marcus.webb@gmail.com', source:'Public GitHub repos', period:'2018–2021' }},
+  { id:'m-resume',   name:'Resume PDF Metadata',         type:'metadata', detail:{ type:'PDF Metadata', author:'Marcus Webb', tool:'Microsoft Word 2019 (macOS)', lastModified:'2024-11-03 09:44', source:'Upwork profile (Google cache)', company:'Apex Digital Solutions' }},
+  { id:'m-npm',      name:'npm package.json Author',     type:'metadata', detail:{ type:'Package Metadata', field:'author: "Marcus Webb <marcus.webb@gmail.com>"', source:'npmjs.com registry — public' }},
+  { id:'m-liscrap',  name:'LinkedIn Scrape 2024',        type:'metadata', detail:{ type:'Profile Scrape', tool:'PhantomBuster/Apollo (inferred)', data:'Name · title · email · location · skills · connections', date:'2024-06' }},
+  { id:'m-twitterip',name:'Twitter Creation IP',         type:'metadata', detail:{ type:'Historical IP Metadata', data:'Account created from San Diego CA 92101 (Downtown)', date:'2010-08-14', note:'IP geolocates to Cox Communications (prior ISP)' }},
+  { id:'m-wayback',  name:'Wayback: toxicwebb.net',      type:'metadata', detail:{ type:'Web Archive', source:'archive.org — 14 snapshots 2016–2020', content:'Dev blog · project showcases · BTC tip address in footer' }},
+  { id:'m-soloc',    name:'Stack Overflow Location Tag', type:'metadata', detail:{ type:'Profile Metadata', data:'Location: "San Diego, CA" (user-set 2016)', source:'SO public profile API' }},
+];
+
+const CROSS_LINKS = [
+  { s:'id-m4rcus',    t:'s-github' },    { s:'id-m4rcus',   t:'s-reddit' },
+  { s:'id-m4rcus',    t:'s-so' },        { s:'id-m4rcus',   t:'d-npm' },
+  { s:'id-toxic',     t:'s-twitter' },   { s:'id-toxic',    t:'s-discord' },
+  { s:'id-toxic',     t:'s-twitch' },    { s:'id-toxic',    t:'br-discord' },
+  { s:'id-mwebb-dev', t:'s-medium' },    { s:'id-mwebb-dev',t:'e-free' },
+  { s:'id-mwebb-dev', t:'d-mwebb' },     { s:'id-mt-webb',  t:'e-apex' },
+  { s:'id-marcus619', t:'s-ig' },        { s:'id-marcus619',t:'s-tiktok' },
+  { s:'id-webbdev',   t:'s-so' },        { s:'id-mwebb619', t:'fin-venmo' },
+  { s:'id-mwebb619',  t:'fin-cashapp' }, { s:'id-m-webb',   t:'m-wayback' },
+  { s:'id-m-webb',    t:'br-myspace' },
+  { s:'em-gmail',     t:'s-linkedin' },  { s:'em-gmail',    t:'s-ig' },
+  { s:'em-gmail',     t:'s-fb' },        { s:'em-gmail',    t:'s-youtube' },
+  { s:'em-gmail',     t:'fin-paypal' },  { s:'em-gmail',    t:'fin-coinbase' },
+  { s:'em-gmail',     t:'br-linkedin' }, { s:'em-gmail',    t:'br-canva' },
+  { s:'em-gmail',     t:'br-twitter' },  { s:'em-gmail',    t:'br-gravatar' },
+  { s:'em-proton',    t:'d-mwebb' },     { s:'em-proton',   t:'ip-vps' },
+  { s:'em-hotmail',   t:'br-adobe' },    { s:'em-hotmail',  t:'br-deezer' },
+  { s:'em-hotmail',   t:'br-myspace' },  { s:'em-apex',     t:'e-apex' },
+  { s:'em-apex',      t:'m-liscrap' },   { s:'em-nova',     t:'e-nova' },
+  { s:'em-nova',      t:'m-ghemail' },
+  { s:'ph-primary',   t:'whatsapp' },    { s:'ph-primary',  t:'ip-spec' },
+  { s:'ph-primary',   t:'fin-venmo' },   { s:'ph-primary',  t:'fin-cashapp' },
+  { s:'ph-secondary', t:'loc-prev' },    { s:'ph-work',     t:'e-apex' },
+  { s:'s-github',     t:'d-ghpages' },   { s:'s-github',    t:'d-npm' },
+  { s:'s-github',     t:'m-ghemail' },   { s:'s-github',    t:'a-paul' },
+  { s:'s-github',     t:'a-dan' },
+  { s:'s-ig',         t:'m-exif' },      { s:'s-ig',        t:'loc-mb' },
+  { s:'s-twitter',    t:'fin-eth' },     { s:'s-twitter',   t:'m-twitterip' },
+  { s:'s-reddit',     t:'loc-cur' },     { s:'s-reddit',    t:'loc-gym' },
+  { s:'s-so',         t:'m-soloc' },     { s:'s-linkedin',  t:'m-liscrap' },
+  { s:'s-linkedin',   t:'e-apex' },      { s:'s-discord',   t:'a-alex' },
+  { s:'s-discord',    t:'a-chris' },     { s:'s-youtube',   t:'s-twitch' },
+  { s:'loc-cur',      t:'ip-spec' },     { s:'loc-cur',     t:'loc-wifi' },
+  { s:'loc-cur',      t:'loc-apex' },    { s:'loc-cur',     t:'loc-cell' },
+  { s:'loc-prev',     t:'loc-cell' },    { s:'loc-prev',    t:'veh-civic' },
+  { s:'loc-mb',       t:'m-exif' },      { s:'loc-mb',      t:'loc-wifi' },
+  { s:'loc-mb',       t:'veh-tacoma' },  { s:'ip-spec',     t:'dev-router' },
+  { s:'ip-cf',        t:'d-mwebb' },     { s:'ip-cf',       t:'d-api' },
+  { s:'ip-vps',       t:'d-mwebb2' },    { s:'ip-vps',      t:'d-paste' },
+  { s:'ip-vps',       t:'dev-raspi' },   { s:'d-mwebb',     t:'d-api' },
+  { s:'d-mwebb',      t:'d-ghpages' },   { s:'d-mwebb',     t:'s-github' },
+  { s:'d-toxic',      t:'m-wayback' },   { s:'d-toxic',     t:'fin-btc' },
+  { s:'d-npm',        t:'m-npm' },       { s:'d-ghpages',   t:'m-resume' },
+  { s:'d-paste',      t:'id-m4rcus' },
+  { s:'a-sarah',      t:'loc-cur' },     { s:'a-derek',     t:'loc-prev' },
+  { s:'a-paul',       t:'e-apex' },      { s:'a-rachel',    t:'e-nova' },
+  { s:'a-alex',       t:'s-discord' },   { s:'a-chris',     t:'s-discord' },
+  { s:'a-lisa',       t:'e-apex' },      { s:'a-james',     t:'loc-prev' },
+  { s:'e-apex',       t:'loc-apex' },    { s:'e-apex',      t:'a-lisa' },
+  { s:'e-nova',       t:'loc-den' },     { s:'e-nova',      t:'a-rachel' },
+  { s:'e-free',       t:'d-mwebb' },     { s:'e-ts',        t:'loc-den' },
+  { s:'e-self',       t:'d-npm' },       { s:'e-self',      t:'s-github' },
+  { s:'br-linkedin',  t:'em-gmail' },    { s:'br-adobe',    t:'em-hotmail' },
+  { s:'br-canva',     t:'em-gmail' },    { s:'br-discord',  t:'s-discord' },
+  { s:'br-twitter',   t:'s-twitter' },   { s:'br-gravatar', t:'em-gmail' },
+  { s:'br-deezer',    t:'em-hotmail' },
+  { s:'dev-mac',      t:'m-ghemail' },   { s:'dev-mac',     t:'m-resume' },
+  { s:'dev-mac',      t:'loc-apex' },    { s:'dev-iphone',  t:'m-exif' },
+  { s:'dev-iphone',   t:'loc-mb' },      { s:'dev-iphone',  t:'ph-primary' },
+  { s:'dev-iphone',   t:'dev-ipad' },    { s:'dev-router',  t:'loc-cur' },
+  { s:'dev-router',   t:'loc-wifi' },    { s:'dev-ipad',    t:'loc-cur' },
+  { s:'dev-raspi',    t:'d-mwebb2' },    { s:'dev-android', t:'loc-prev' },
+  { s:'fin-eth',      t:'s-twitter' },   { s:'fin-btc',     t:'m-wayback' },
+  { s:'fin-coinbase', t:'em-gmail' },    { s:'fin-paypal',  t:'e-free' },
+  { s:'veh-tacoma',   t:'loc-cur' },     { s:'veh-tacoma',  t:'loc-mb' },
+  { s:'veh-civic',    t:'loc-prev' },
+  { s:'m-exif',       t:'dev-iphone' },  { s:'m-exif',      t:'loc-mb' },
+  { s:'m-ghemail',    t:'em-nova' },     { s:'m-ghemail',   t:'em-gmail' },
+  { s:'m-resume',     t:'dev-mac' },     { s:'m-resume',    t:'e-apex' },
+  { s:'m-npm',        t:'d-npm' },       { s:'m-npm',       t:'id-m4rcus' },
+  { s:'m-liscrap',    t:'s-linkedin' },  { s:'m-twitterip', t:'s-twitter' },
+  { s:'m-wayback',    t:'d-toxic' },     { s:'m-soloc',     t:'s-so' },
+  { s:'m-soloc',      t:'loc-cur' },
+];
+
+const ALL_NODES = [SUBJECT_NODE, ...HUB_NODES, ...DATA_NODES];
+const N_IDX = Object.fromEntries(ALL_NODES.map(n => [n.id, n]));
+
+function buildGraph(activeTypes) {
+  const nodes = ALL_NODES.filter(n => n.id === 'subject' || n.isHub || activeTypes.has(n.type));
+  const ids = new Set(nodes.map(n => n.id));
+  const treeLinks = [];
+  HUB_NODES.forEach(hub => {
+    if (!ids.has(hub.id)) return;
+    treeLinks.push({ source:'subject', target:hub.id, isTree:true });
+    DATA_NODES.filter(d => d.type === hub.type && ids.has(d.id))
+      .forEach(d => treeLinks.push({ source:hub.id, target:d.id, isTree:true }));
+  });
+  const crossLinks = CROSS_LINKS
+    .filter(l => ids.has(l.s) && ids.has(l.t))
+    .map(l => ({ source:l.s, target:l.t, isTree:false }));
+  return { nodes, links:[...treeLinks, ...crossLinks] };
+}
+
+function buildNeighborMap(nodes, links) {
+  const m = {};
+  nodes.forEach(n => { m[n.id] = new Set(); });
+  links.forEach(l => {
+    const s = typeof l.source==='object' ? l.source.id : l.source;
+    const t = typeof l.target==='object' ? l.target.id : l.target;
+    if (m[s]) m[s].add(t);
+    if (m[t]) m[t].add(s);
+  });
+  return m;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let is2D        = false;
+let orbitOn     = true;
+let flowOn      = true;
+let highlighted = new Set();
+let selNode     = null;
+let neighborMap = {};
+const activeTypes = new Set(Object.keys(CAT).filter(k => k !== 'subject'));
+
+// Orbit highlight — a continuous 0→1 float lerped every RAF frame.
+// Separate from `highlighted` so manual node taps work independently.
+let orbitHighlightAlpha  = 0;   // current rendered value, lerped
+let orbitHighlightTarget = 0;   // 1 = fade in, 0 = fade out
+let orbitHighlightedSet  = new Set();  // hub + its neighbors for current dwell
+
+// ═══════════════════════════════════════════════════════════════
+// NODE RENDERING
+// ═══════════════════════════════════════════════════════════════
+function makeNodeObj(node) {
+  if (node.isSubject) {
+    const g = new THREE.Group();
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(5, 14, 14),
+      new THREE.MeshBasicMaterial({ color:0xc4a882 })
+    );
+    g.add(sphere);
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(8, 0.7, 8, 32),
+      new THREE.MeshBasicMaterial({ color:0xc4a882, transparent:true, opacity:0.35 })
+    );
+    if (!is2D) g.add(ring);
+    const lbl = new SpriteText(node.name);
+    lbl.color = '#c4a882';
+    lbl.textHeight = 4;
+    lbl.fontFace = 'JetBrains Mono, monospace';
+    lbl.fontWeight = '500';
+    lbl.position.set(0, -13, 0);
+    g.add(lbl);
+    return g;
+  }
+  if (node.isHub) {
+    const sp = new SpriteText(node.name.toUpperCase());
+    sp.color = '#9098b0';
+    sp.backgroundColor = 'rgba(55,65,95,0.28)';
+    sp.borderColor = 'rgba(100,115,165,0.40)';
+    sp.borderWidth = 0.7;
+    sp.borderRadius = 0;
+    sp.textHeight = 3.6;
+    sp.fontFace = 'JetBrains Mono, monospace';
+    sp.fontWeight = '500';
+    sp.padding = [3, 7];
+    return sp;
+  }
+  const g = new THREE.Group();
+  const dot = new THREE.Mesh(
+    new THREE.SphereGeometry(1.8, 7, 7),
+    new THREE.MeshBasicMaterial({ color: parseInt(CAT[node.type]?.color?.replace('#','') || '4a5060', 16), transparent:true, opacity:0.85 })
+  );
+  g.add(dot);
+  const shortName = node.name.length > 30 ? node.name.slice(0,28) + '…' : node.name;
+  const lbl = new SpriteText(shortName);
+  lbl.color = '#6a7282';
+  lbl.textHeight = 2.3;
+  lbl.fontFace = 'JetBrains Mono, monospace';
+  lbl.position.set(10, 0, 0);
+  g.add(lbl);
+  return g;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GRAPH INIT
+// ═══════════════════════════════════════════════════════════════
+const container = document.getElementById('g3d');
+
+const Graph = ForceGraph3D({ controlType:'orbit' })(container)
+  .backgroundColor('#0b0d12')
+  .showNavInfo(false)
+  .nodeId('id')
+  .nodeLabel(n => n.isHub || n.isSubject ? null : `
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 0">
+      <div style="color:${CAT[n.type]?.color || '#9098b0'};font-weight:600;margin-bottom:2px">${n.name}</div>
+      <div style="color:rgba(255,255,255,0.3)">${CAT[n.type]?.label || n.type}</div>
+    </div>`)
+  .nodeThreeObject(makeNodeObj)
+  .nodeThreeObjectExtend(false)
+  .nodeOpacity(1)
+  .linkColor(l => {
+    const s = typeof l.source==='object' ? l.source.id : l.source;
+    const t = typeof l.target==='object' ? l.target.id : l.target;
+
+    // Manual selection (node tap) — hard highlight, no fade
+    if (highlighted.size > 0) {
+      const active = highlighted.has(s) && highlighted.has(t);
+      if (!active) return 'rgba(255,255,255,0.018)';
+      return l.isTree ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.28)';
+    }
+
+    // Orbit highlight — values interpolated by orbitHighlightAlpha (0→1)
+    if (orbitHighlightAlpha > 0.001) {
+      const a    = orbitHighlightAlpha;
+      const active = orbitHighlightedSet.has(s) && orbitHighlightedSet.has(t);
+      if (active) {
+        // Fade from neutral up to full highlight
+        const hi = l.isTree
+          ? 0.22 + (0.55 - 0.22) * a
+          : 0.05 + (0.28 - 0.05) * a;
+        return `rgba(255,255,255,${hi.toFixed(3)})`;
+      } else {
+        // Fade non-active links from neutral down to dim
+        const lo = l.isTree
+          ? 0.22 - (0.22 - 0.018) * a
+          : 0.05 - (0.05 - 0.012) * a;
+        return `rgba(255,255,255,${lo.toFixed(3)})`;
+      }
+    }
+
+    return l.isTree ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.05)';
+  })
+  .linkWidth(l => l.isTree ? 0.6 : 0.3)
+  .linkOpacity(1)
+  .linkDirectionalArrowLength(l => l.isTree ? 0 : 2.5)
+  .linkDirectionalArrowRelPos(0.88)
+  .linkDirectionalArrowColor(() => 'rgba(255,255,255,0.2)')
+  .linkDirectionalParticles(l => (flowOn && l.isTree) ? 1 : 0)
+  .linkDirectionalParticleSpeed(0.004)
+  .linkDirectionalParticleWidth(1.0)
+  .linkDirectionalParticleColor(() => 'rgba(255,255,255,0.55)')
+  .warmupTicks(100)
+  .cooldownTicks(300)
+  .d3VelocityDecay(0.36)
+  .onNodeClick(onNodeClick)
+  .onBackgroundClick(onBgClick);
+
+function applyData() {
+  const gd = buildGraph(activeTypes);
+  neighborMap = buildNeighborMap(gd.nodes, gd.links);
+  Graph.graphData(gd);
+  updateStats(gd);
+}
+
+applyData();
+Graph.cameraPosition({ x:0, y:0, z:750 });
+
+Graph.d3Force('charge').strength(-80);
+Graph.d3Force('link')
+  .distance(l => l.isTree ? (l.source === 'subject' || (typeof l.source==='object' && l.source.id==='subject') ? 140 : 55) : 25)
+  .strength(l => l.isTree ? 1.2 : 0.15);
+
+function hubRadialForce(alpha) {
+  const { nodes } = Graph.graphData();
+  const subject = nodes.find(n => n.id === 'subject');
+  if (!subject) return;
+  subject.x = 0; subject.y = 0;
+  subject.vx = 0; subject.vy = 0;
+  if (!is2D) { subject.z = subject.z || 0; subject.vz = 0; }
+  const hubs = nodes.filter(n => n.isHub);
+  const n    = hubs.length;
+  hubs.forEach((hub, i) => {
+    const azimuth = (i / n) * Math.PI * 2;
+    let tx, ty, tz;
+    if (is2D) {
+      const r = 220;
+      tx = r * Math.cos(azimuth);
+      ty = r * Math.sin(azimuth);
+      tz = 0;
+    } else {
+      const polar  = Math.acos(1 - 2 * (i + 0.5) / n);
+      const r      = 200;
+      tx = r * Math.sin(polar) * Math.cos(azimuth);
+      ty = r * Math.cos(polar);
+      tz = r * Math.sin(polar) * Math.sin(azimuth);
+    }
+    const k = alpha * 0.18;
+    hub.vx = (hub.vx || 0) - ((hub.x || 0) - tx) * k;
+    hub.vy = (hub.vy || 0) - ((hub.y || 0) - ty) * k;
+    if (!is2D && hub.vz !== undefined) hub.vz = (hub.vz || 0) - ((hub.z || 0) - tz) * k;
+    if (is2D && hub.vz !== undefined) { hub.z = 0; hub.vz = 0; }
+  });
+  nodes.forEach(n => {
+    if (n.isHub || n.id === 'subject') return;
+    const hub = nodes.find(h => h.isHub && h.type === n.type);
+    if (!hub) return;
+    const k = alpha * 0.015;
+    n.vx = (n.vx || 0) - ((n.x || 0) - (hub.x || 0)) * k;
+    n.vy = (n.vy || 0) - ((n.y || 0) - (hub.y || 0)) * k;
+    if (!is2D && n.vz !== undefined) n.vz = (n.vz || 0) - ((n.z || 0) - (hub.z || 0)) * k;
+    if (is2D && n.vz !== undefined) { n.z = 0; n.vz = 0; }
+  });
+}
+Graph.d3Force('hub', hubRadialForce);
+
+// ═══════════════════════════════════════════════════════════════
+// CINEMATIC ORBIT — Closed Centripetal Catmull-Rom Spline
+//
+// The camera tours all 12 category hubs in a single unbroken loop.
+// There are no "shots", no "phases", no bezier control point math,
+// and no lerp inertia. The camera simply rides a closed spline that
+// passes through all 12 waypoints and wraps back to the start with
+// zero discontinuity.
+//
+// Architecture:
+//   • buildOrbitWaypoints() — samples live hub positions and adds
+//     a unique radial offset (angle + elevation) per hub
+//   • catmullRomPoint()     — centripetal Catmull-Rom evaluation;
+//     alpha=0.5 eliminates cusps regardless of spacing
+//   • getSplinePoint(wp, u) — evaluates the CLOSED spline at global
+//     parameter u ∈ [0, N]; handles wrap-around automatically
+//   • orbitFrame()          — the RAF loop; derives u from elapsed
+//     time with a per-segment ease (slow at hubs, fast between)
+//   • DOF blur              — driven by current speed (u̇), peaks
+//     mid-transit, near-zero during dwell
+// ═══════════════════════════════════════════════════════════════
+
+// ── SPLINE MATH ───────────────────────────────────────────────
+function catmullRomPoint(p0, p1, p2, p3, t, alpha) {
+  alpha = alpha === undefined ? 0.5 : alpha;
+  function tj(ti, pi, pj) {
+    const dx = pj.x - pi.x, dy = pj.y - pi.y, dz = pj.z - pi.z;
+    return ti + Math.pow(dx*dx + dy*dy + dz*dz, alpha * 0.5);
+  }
+  const t0 = 0;
+  const t1 = tj(t0, p0, p1);
+  const t2 = tj(t1, p1, p2);
+  const t3 = tj(t2, p2, p3);
+  const tc = t1 + t * (t2 - t1);
+
+  function lv(a, b, ta, tb, tc) {
+    const s = (tc - ta) / (tb - ta);
+    return {
+      x: a.x + s*(b.x-a.x),
+      y: a.y + s*(b.y-a.y),
+      z: a.z + s*(b.z-a.z)
+    };
+  }
+  const A1 = lv(p0,p1,t0,t1,tc), A2 = lv(p1,p2,t1,t2,tc), A3 = lv(p2,p3,t2,t3,tc);
+  const B1 = lv(A1,A2,t0,t2,tc), B2 = lv(A2,A3,t1,t3,tc);
+  const C  = lv(B1,B2,t1,t2,tc);
+  return new THREE.Vector3(C.x, C.y, C.z);
+}
+
+// Evaluate closed spline at global u ∈ [0, N] (wraps at N)
+function getSplinePoint(waypoints, u) {
+  const N = waypoints.length;
+  const i = Math.floor(u) % N;
+  const t = u - Math.floor(u);
+  const p0 = waypoints[(i - 1 + N) % N];
+  const p1 = waypoints[i];
+  const p2 = waypoints[(i + 1) % N];
+  const p3 = waypoints[(i + 2) % N];
+  return catmullRomPoint(p0, p1, p2, p3, t, 0.5);
+}
+
+// ── WAYPOINTS ─────────────────────────────────────────────────
+function buildOrbitWaypoints() {
+  const { nodes } = Graph.graphData();
+  const hubs = HUB_NODES
+    .map(h => nodes.find(n => n.id === h.id))
+    .filter(Boolean);
+
+  // Each hub gets a unique orbital vantage point (radius, elevation, angle)
+  // These are intentionally varied so the tour has a curated, human feel
+  const OFFSETS = [
+    { r:280, elev: 80,  a:0.00 },  // identity
+    { r:220, elev:-50,  a:0.70 },  // contact
+    { r:300, elev: 40,  a:1.40 },  // social
+    { r:240, elev:120,  a:2.10 },  // location
+    { r:260, elev: 20,  a:2.80 },  // domain
+    { r:200, elev: 70,  a:3.50 },  // associate
+    { r:290, elev:-30,  a:4.20 },  // breach
+    { r:220, elev: 90,  a:4.90 },  // device
+    { r:250, elev: 50,  a:5.60 },  // financial
+    { r:280, elev: 30,  a:0.35 },  // employment
+    { r:210, elev: 60,  a:1.10 },  // vehicle
+    { r:270, elev:-20,  a:1.80 },  // metadata
+  ];
+
+  const camWaypoints  = [];
+  const lookWaypoints = [];
+
+  hubs.forEach((hub, i) => {
+    const off = OFFSETS[i % OFFSETS.length];
+    const hx = hub.x || 0, hy = hub.y || 0, hz = hub.z || 0;
+    camWaypoints.push(new THREE.Vector3(
+      hx + off.r * Math.cos(off.a),
+      hy + off.elev,
+      hz + off.r * Math.sin(off.a)
+    ));
+    // Look-at: hub pulled 15% toward subject so the subject stays in frame
+    lookWaypoints.push(new THREE.Vector3(hx * 0.85, hy * 0.85, hz * 0.85));
+  });
+
+  return { camWaypoints, lookWaypoints, hubs };
+}
+
+// ── TIMING ────────────────────────────────────────────────────
+// Each hub gets DWELL_MS of slow orbital movement followed by
+// TRANSIT_MS of fast arcing travel to the next hub.
+const DWELL_MS   = 5500;
+const TRANSIT_MS = 2800;
+const SEGMENT_MS = DWELL_MS + TRANSIT_MS;
+const TOTAL_MS   = SEGMENT_MS * 12;   // exactly 12 hubs → seamless loop
+
+// Eased u value within a segment.
+// During dwell:   u moves from 0 to DWELL_CRAWL (tiny arc near waypoint)
+// During transit: u moves from DWELL_CRAWL to 1.0 (full travel to next)
+const DWELL_CRAWL = 0.10;   // how far along the spline we drift during dwell
+
+function segmentU(segT) {
+  const dwellFrac = DWELL_MS / SEGMENT_MS;
+  if (segT <= dwellFrac) {
+    // Dwell: linear drift over a small arc
+    return (segT / dwellFrac) * DWELL_CRAWL;
+  } else {
+    // Transit: ease-in-out cubic from DWELL_CRAWL → 1.0
+    const trav = (segT - dwellFrac) / (1 - dwellFrac);  // 0→1
+    const eased = trav < 0.5
+      ? 4 * trav * trav * trav
+      : 1 - Math.pow(-2 * trav + 2, 3) / 2;
+    return DWELL_CRAWL + eased * (1 - DWELL_CRAWL);
+  }
+}
+
+// Speed of u̇ at a given segT — used for DOF blur intensity
+function segmentSpeed(segT) {
+  const dwellFrac = DWELL_MS / SEGMENT_MS;
+  if (segT <= dwellFrac) return 0;
+  const trav = (segT - dwellFrac) / (1 - dwellFrac);
+  return Math.pow(Math.sin(Math.PI * trav), 2);  // sin²: peaks mid-transit
+}
+
+// ── ORBIT STATE ───────────────────────────────────────────────
+let orbitRAF           = null;
+let orbitStartTime     = 0;
+let orbitCamWaypoints  = null;
+let orbitLookWaypoints = null;
+let orbitHubs          = null;
+let orbitActiveHubIdx  = -1;
+
+// DOF
+let dofCanvas  = null;
+let dofCtx     = null;
+let dofActive  = false;
+let dofBlurNow = 0;
+
+function dofInit() {
+  if (dofCanvas) return;
+  dofCanvas = document.createElement('canvas');
+  dofCtx    = dofCanvas.getContext('2d');
+  Object.assign(dofCanvas.style, {
+    position:      'fixed',
+    top:           'var(--hh)',
+    left:          '0',
+    right:         '0',
+    bottom:        'var(--sh)',
+    pointerEvents: 'none',
+    zIndex:        '11',
+    opacity:       '0',
+    transition:    'opacity 0.6s ease',
+  });
+  document.getElementById('gwrap').appendChild(dofCanvas);
+  dofResize();
+}
+
+function dofResize() {
+  if (!dofCanvas) return;
+  const w = container.offsetWidth, h = container.offsetHeight;
+  dofCanvas.width = w; dofCanvas.height = h;
+  dofCanvas.style.width = w + 'px'; dofCanvas.style.height = h + 'px';
+}
+
+function applyDOF(blurPx, focalRadius) {
+  if (!dofActive || blurPx < 0.3) {
+    if (dofCanvas) dofCanvas.style.opacity = '0';
+    return;
+  }
+  const w = dofCanvas.width, h = dofCanvas.height;
+  dofCtx.clearRect(0, 0, w, h);
+  dofCtx.filter = `blur(${blurPx.toFixed(1)}px)`;
+  dofCtx.drawImage(Graph.renderer().domElement, 0, 0, w, h);
+  dofCtx.filter = 'none';
+  dofCtx.globalCompositeOperation = 'destination-out';
+  const grd = dofCtx.createRadialGradient(w/2, h/2, focalRadius*0.3, w/2, h/2, focalRadius);
+  grd.addColorStop(0,    'rgba(0,0,0,1)');
+  grd.addColorStop(0.55, 'rgba(0,0,0,0.9)');
+  grd.addColorStop(1,    'rgba(0,0,0,0)');
+  dofCtx.fillStyle = grd;
+  dofCtx.fillRect(0, 0, w, h);
+  dofCtx.globalCompositeOperation = 'source-over';
+  dofCanvas.style.opacity = '1';
+}
+
+// ── MAIN ORBIT LOOP ───────────────────────────────────────────
+function orbitFrame(now) {
+  if (!orbitOn || is2D) { orbitRAF = null; return; }
+  orbitRAF = requestAnimationFrame(orbitFrame);
+  if (!orbitCamWaypoints) return;
+
+  const N       = orbitCamWaypoints.length;   // 12
+  const rawElapsed = now - orbitStartTime;
+  const elapsed    = rawElapsed % TOTAL_MS;
+
+  // At the loop seam (last ~120ms of the cycle) suppress DOF to hide any
+  // micro-discontinuity when elapsed wraps, then let it fade back in.
+  const seam = elapsed > TOTAL_MS - 120 || elapsed < 80;
+
+  // Reset highlight sentinel at loop wrap so hub-0 fires again on pass 2+
+  const loopFraction = elapsed / TOTAL_MS;
+  if (loopFraction < 0.004 && orbitActiveHubIdx >= 0) {
+    orbitActiveHubIdx = -2;
+  }
+
+  const segIdx = Math.floor(elapsed / SEGMENT_MS) % N;
+  const segT   = (elapsed % SEGMENT_MS) / SEGMENT_MS;
+
+  const uOffset = segmentU(segT);
+  const splineU = segIdx + uOffset;
+
+  const camPos  = getSplinePoint(orbitCamWaypoints,  splineU);
+  const lookPos = getSplinePoint(orbitLookWaypoints, splineU);
+
+  const cam      = Graph.camera();
+  const controls = Graph.controls();
+  cam.position.copy(camPos);
+  cam.lookAt(lookPos);
+  controls.target.copy(lookPos);
+  controls.update();
+
+  // DOF
+  const spd        = segmentSpeed(segT);
+  const blurTarget = spd * 6.0;
+  dofBlurNow      += (blurTarget - dofBlurNow) * 0.07;
+  const isDwell    = segT < (DWELL_MS / SEGMENT_MS);
+  const focalR     = Math.min(container.offsetWidth, container.offsetHeight)
+                     * (isDwell ? 0.44 : (0.16 + (1 - spd) * 0.26));
+  applyDOF(seam ? 0 : dofBlurNow, focalR);
+
+  // HUD
+  const hub   = orbitHubs[segIdx];
+  const label = hub ? (CAT[hub.type]?.label || hub.name || '').toUpperCase() : '—';
+  document.getElementById('orbit-label').textContent = `${isDwell ? 'ORBIT' : 'TRANSIT →'}  ${label}`;
+
+  // ── ORBIT HIGHLIGHT FADE ──────────────────────────────────────
+  const FADE_IN  = 0.055;
+  const FADE_OUT = 0.038;
+
+  if (isDwell && segIdx !== orbitActiveHubIdx) {
+    orbitActiveHubIdx = segIdx;
+    if (hub) {
+      const nb = neighborMap[hub.id] || new Set();
+      orbitHighlightedSet = new Set([hub.id, ...nb]);
+      orbitHighlightAlpha = 0;   // always fade in fresh for new hub
+    }
+    orbitHighlightTarget = 1;
+    const connCount = neighborMap[hub?.id]?.size || 0;
+    document.getElementById('sel').textContent =
+      `ORBIT  ·  ${label}  ·  ${connCount} connections`;
+
+  } else if (!isDwell && orbitActiveHubIdx !== -2) {
+    orbitActiveHubIdx    = -2;
+    orbitHighlightTarget = 0;
+    document.getElementById('sel').textContent = 'ORBIT  ·  TRANSIT';
+  }
+
+  // Lerp alpha toward target every frame
+  const rate     = orbitHighlightTarget > orbitHighlightAlpha ? FADE_IN : FADE_OUT;
+  const prevAlpha = orbitHighlightAlpha;
+  orbitHighlightAlpha += (orbitHighlightTarget - orbitHighlightAlpha) * rate;
+
+  // Only trigger linkColor repaint when alpha actually changed meaningfully.
+  // This is the key crash-prevention fix: linkColor(fn) in 3d-force-graph
+  // re-registers the accessor AND schedules geometry work every call —
+  // calling it at 60fps for the entire dwell period leaks memory and crashes.
+  if (Math.abs(orbitHighlightAlpha - prevAlpha) > 0.0005) {
+    Graph.linkColor(Graph.linkColor());
+  }
+}
+
+// ── START / STOP ──────────────────────────────────────────────
+function startOrbit() {
+  if (orbitRAF) return;
+  dofInit();
+  dofActive         = true;
+  dofBlurNow        = 0;
+  orbitActiveHubIdx = -2;
+  orbitHighlightAlpha  = 0;
+  orbitHighlightTarget = 0;
+  orbitHighlightedSet  = new Set();
+
+  // Rebuild waypoints from current (settled) node positions
+  const wp = buildOrbitWaypoints();
+  orbitCamWaypoints  = wp.camWaypoints;
+  orbitLookWaypoints = wp.lookWaypoints;
+  orbitHubs          = wp.hubs;
+
+  // Find the hub nearest the current camera position so the orbit
+  // starts from the closest waypoint — no abrupt jump to hub 0
+  const curPos = Graph.camera().position.clone();
+  let bestDist = Infinity, bestSeg = 0;
+  orbitCamWaypoints.forEach((wp, i) => {
+    const d = curPos.distanceTo(wp);
+    if (d < bestDist) { bestDist = d; bestSeg = i; }
+  });
+  // Align orbitStartTime so elapsed currently maps to bestSeg's dwell start
+  orbitStartTime = performance.now() - bestSeg * SEGMENT_MS;
+
+  document.getElementById('orbit-hud').style.display = 'block';
+  orbitRAF = requestAnimationFrame(orbitFrame);
+}
+
+function stopOrbit() {
+  if (orbitRAF) { cancelAnimationFrame(orbitRAF); orbitRAF = null; }
+  dofActive = false;
+  if (dofCanvas) dofCanvas.style.opacity = '0';
+  document.getElementById('orbit-hud').style.display = 'none';
+  // Reset orbit highlight — clear instantly since user is taking manual control
+  orbitHighlightAlpha  = 0;
+  orbitHighlightTarget = 0;
+  orbitHighlightedSet  = new Set();
+  Graph.linkColor(Graph.linkColor());
+}
+
+function toggleOrbit() {
+  orbitOn = !orbitOn;
+  ['b-orbit','tb-orbit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('on', orbitOn);
+  });
+  if (orbitOn) { startOrbit(); } else { stopOrbit(); }
+}
+
+function toggleFlow() {
+  flowOn = !flowOn;
+  Graph.linkDirectionalParticles(l => (flowOn && l.isTree) ? 1 : 0);
+  ['b-flow','tb-flow'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('on', flowOn);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PDF EXPORT
+// ═══════════════════════════════════════════════════════════════
+function closePdfModal() {
+  document.getElementById('pdf-modal').style.display = 'none';
+}
+
+function exportPDF() {
+  const modal = document.getElementById('pdf-modal');
+  modal.style.display = 'flex';
+  document.getElementById('pdf-loading').style.display = 'flex';
+  document.getElementById('pdf-report').style.display = 'none';
+  document.getElementById('pdf-print-btn').style.display = 'none';
+  document.getElementById('pdf-wordcount').textContent = '';
+
+  // Simulate processing stages for realism, then render pre-written report
+  const stages = ['Parsing graph data…','Cross-referencing nodes…','Correlating breach records…','Building narrative…','Finalising report…'];
+  let si = 0;
+  const stageEl = document.getElementById('pdf-status');
+  stageEl.textContent = stages[0];
+  const stageTimer = setInterval(() => {
+    si++;
+    if (si < stages.length) { stageEl.textContent = stages[si]; }
+    else { clearInterval(stageTimer); renderReport(STATIC_REPORT); }
+  }, 520);
+}
+
+// ── PRE-WRITTEN INTELLIGENCE REPORT ───────────────────────────
+// Authored from all DATA_NODES, CROSS_LINKS, and subject metadata.
+// Sections follow the standard OSG assessment format.
+const STATIC_REPORT = `## EXECUTIVE SUMMARY
+
+Marcus Tyler Webb (DOB: 1990-03-14, age 35) is a United States citizen and senior software developer currently employed at Apex Digital Solutions in San Diego, California. The subject maintains an extensive and largely unguarded digital footprint spanning two decades, comprising eight confirmed aliases, four active email addresses, three phone numbers, fourteen social media profiles, seven financial accounts, and a self-operated VPS server. Risk is assessed at **MEDIUM** (62/100). While no evidence of criminal activity has been identified, the aggregated intelligence picture reveals a subject with significant exposure across multiple high-severity data breach events, active cryptocurrency holdings, and a technical infrastructure capable of anonymised communications.
+
+The most significant findings of this investigation are: (1) three email addresses linked to confirmed data breach exposure, with the oldest breach dating to LinkedIn 2012 yielding an unsalted SHA-1 password hash; (2) publicly visible Ethereum and Bitcoin wallet addresses linked directly to the subject's social media accounts, disclosing an estimated $10,200 in holdings; (3) a DigitalOcean VPS (45.33.xx.xx) running nginx and PostgreSQL with SSH open on port 22, registered under a ProtonMail address in an apparent attempt to decouple infrastructure from identity; and (4) GPS metadata embedded in pre-2022 Instagram photographs that precisely corroborates the subject's current residential address and frequent locations.
+
+Cross-referencing of the subject's alias network, breach exposure, device fingerprints, and location data establishes a coherent and high-confidence identity picture. The subject has not employed meaningful operational security measures. No indicators of nation-state affiliation, organised crime association, or active threat behaviour have been identified. Recommended monitoring priority: **MEDIUM**.
+
+## IDENTITY & ALIASES
+
+Eight distinct online identifiers have been attributed to Marcus Tyler Webb with varying confidence levels. The oldest, **m_webb**, appears in archived forum posts dating to 2006 and was recovered via Wayback Machine captures of the now-expired domain toxicwebb.net. This handle is also present in the MySpace 2016 breach dataset. The username **toxicwebb88** (confidence: HIGH) is the subject's most persistent gaming and social alias, active from 2008 across Twitter, Discord, and Twitch, and confirmed in the 2023 Discord message dump. **m4rcus_w** (confidence: HIGH) is the subject's developer identity, linked to GitHub, Reddit, Steam, npm, and Pastebin, with first appearance in 2011 and activity as recently as February 2025.
+
+The corporate alias **mt.webb** is CONFIRMED via Apex Digital's internal SSO and Slack systems, corroborated by LinkedIn. **mwebb_dev** (confidence: CONFIRMED) serves as the subject's freelance identity on Upwork, Medium, and npm, tied directly to the domain mwebb-dev.com and its associated ProtonMail registration. The payment alias **mwebb_619** (confidence: CONFIRMED) connects Venmo, Cash App, and Zelle accounts to the subject's primary T-Mobile number, with the "619" suffix corresponding to the San Diego area code. **marcus619** and **webbdev** complete the alias set, used across Instagram, TikTok, Hinge, Stack Overflow, and HackerNews respectively.
+
+The alias progression reveals a deliberate but inconsistently applied separation between the subject's consumer/gaming identity (toxicwebb88), professional developer identity (mwebb_dev, mt.webb), and financial identity (mwebb_619). This segmentation is undermined by cross-platform linking — notably, the npm registry publicly exposes marcus.webb@gmail.com in package.json author fields, and a Coinbase referral link committed to a public GitHub repository in 2021 ties all three spheres together.
+
+## CONTACT INFRASTRUCTURE
+
+The subject operates four email addresses across distinct use cases. **marcus.webb@gmail.com** is the primary personal address, confirmed in three breach datasets (LinkedIn 2012, Canva 2019, Twitter enumeration 2022) and linked to LinkedIn, Facebook, Instagram, YouTube, PayPal, and Coinbase. This address is the subject's highest-exposure identifier and likely serves as the password recovery anchor for the majority of accounts. **mwebb88@protonmail.com** (zero known breaches) is used exclusively for operational infrastructure — domain registrations, VPS provisioning, and two-factor authentication recovery — indicating the subject has some awareness of email compartmentalisation, though implementation is inconsistent. **mwebb619@hotmail.com** is a legacy address, inactive since approximately 2016, exposed in the Adobe 2013 and Deezer 2022 breach datasets. The Deezer record is notable as it independently confirms the subject's date of birth. **m.webb@apex-digital.com** is the current corporate address, active since April 2021, inadvertently exposed in GitHub commit history from the NovaTech period as m.webb@novatech.io.
+
+Three phone numbers are attributed to the subject. The primary mobile (+1 619-555-0147, T-Mobile, San Diego CA) is linked to WhatsApp, Signal, Venmo, and Cash App, and was confirmed via carrier records and iCloud metadata. A secondary Verizon number (+1 760-555-0293) is associated with the prior Chula Vista address and appears inactive. A RingCentral VoIP line (+1 619-555-0891) is listed in the Apex Digital corporate directory as the subject's work contact.
+
+## DIGITAL FOOTPRINT — SOCIAL MEDIA
+
+The subject maintains active profiles across eleven platforms with a total estimated reach of approximately 5,300 followers and connections. **Twitter/X (@toxicwebb)** has 1,204 followers, joined August 2010, with a self-described bio of "dev / builder / crypto curious." This account is directly linked to the subject's Ethereum wallet address (posted 2021) and was enumerated in the January 2022 Twitter scrape. **LinkedIn (linkedin/marcuswebb)** has 312 connections and lists the subject's current role accurately; it was scraped by a commercial data aggregator in June 2024, likely PhantomBuster or Apollo. **GitHub (github/m4rcus)** has 34 public repositories, joined July 2013, with the most recent push on 2025-03-08 — indicating ongoing active development. The repository history contains email address leakage across two corporate domains.
+
+**Reddit (u/toxicwebb88)** has 14,229 karma accumulated since November 2012, with top activity in r/personalfinance, r/CryptoCurrency, and r/sandiego. A geotagged post to r/sandiego corroborates the subject's current Mission Avenue address. **Instagram (@marcuswebb_sd)** has 489 followers and is the source of GPS EXIF metadata placing the subject at Mission Bay Aquatic Park (32.7714°N, 117.2140°W) as recently as September 2021. Pre-2022 photographs across this account contain device metadata attributing them to an iPhone 13 Pro. **TikTok (@m4rcusw)** has 2,108 followers, joined December 2021, currently active. **Discord (toxicwebb#4421)** was confirmed in a July 2023 data dump containing username, message history, and server membership — the subject was present in developer and cryptocurrency community servers alongside associate Chris Okafor (cokafor#7712).
+
+YouTube (MarcusBuilds, 891 subscribers) and Twitch (toxicwebb_tv, 312 followers) are both inactive since 2022–2023. Stack Overflow (webbdev, 4,821 reputation) remains active, with the subject's profile self-reporting location as "San Diego, CA."
+
+## GEOGRAPHIC PROFILE
+
+The subject's residential history traces from San Diego (Downtown area, 2010 based on Twitter account creation IP via Cox Communications), to Denver, CO (2015–2018, corroborated by LinkedIn employment history and Reddit geotag), to Chula Vista, CA (1102 E St, 2018–2022, confirmed via prior voter registration and secondary phone carrier), and currently to **4821 Mission Ave, San Diego CA 92116** (2022–present, HIGH confidence). The current address is corroborated by voter registration records, USPS NCOA data, Amazon delivery metadata extracted from a package photograph, and a geotagged Reddit comment.
+
+The residential Spectrum broadband connection (73.153.xx.xx, AS20115) maps to the Mission Ave corridor. The WiFi SSID "MarcusNet_5G" (BSSID A4:11:62:**:**:**, WPA3) appears in the Wigle.net wardriving database at the same corridor. T-Mobile cell tower SD-4421 covers the Mission Hills / North Park area encompassing the current address. The subject's Netgear R7000 router MAC address (A4:11:62:) was identified via a passive Shodan scan in 2024.
+
+Two high-frequency location clusters have been identified beyond the residence: **Apex Digital Solutions, Kearny Mesa** (weekdays, approximately 09:00–18:00, HIGH confidence via corporate directory, LinkedIn, and device location metadata from the subject's MacBook Pro); and **Mission Bay Aquatic Park** (consistent weekend presence, HIGH confidence via Instagram EXIF, Reddit geopost, and a 2024 ALPR sighting of the subject's Toyota Tacoma at 32.7714°N, 117.2140°W). A third cluster at 24 Hour Fitness, Mission Valley indicates a recurring evening gym schedule approximately three times per week since 2023.
+
+## FINANCIAL INTELLIGENCE
+
+Six financial platforms and two cryptocurrency addresses are attributed to the subject. **Venmo (@mwebb_619)** and **Cash App ($mwebb619)** are linked to the primary T-Mobile number and maintain public transaction feeds — 30-day history was accessible at time of collection. **PayPal (marcus.webb@gmail.com)** is active and connected to Upwork payouts, indicating the account receives regular freelance income. A Coinbase account is inferred at MEDIUM confidence via a referral link committed to a public GitHub repository in 2021.
+
+The subject's **Ethereum wallet (0x7a3f1b9e0fa3c28d54e776f93d02a1d8b4ffd8c2)** holds approximately 1.42 ETH (~$3,800 at time of collection), with 67 transactions and last activity on 2025-01-29. This address was voluntarily linked to the subject's Twitter account in a 2021 post. The **Bitcoin address (1KxG9fBzTLw7QHkpCdP3sUYvLmR5pWq4NE)**, holding approximately 0.08 BTC (~$6,400), was recovered from a forum signature on a Bitcointalk archive dated 2017 and also appeared in the footer of toxicwebb.net prior to domain expiry, as captured by Wayback Machine snapshots. Combined cryptocurrency holdings are estimated at **$10,200**. No evidence of high-frequency trading, mixing services, or privacy coins has been identified, reducing the financial risk assessment.
+
+## EMPLOYMENT & PROFESSIONAL HISTORY
+
+The subject is currently employed as a **Senior Full Stack Developer at Apex Digital Solutions**, Kearny Mesa, San Diego (W-2, hybrid schedule, April 2021–present). Apex Digital is a software consultancy with estimated 2024 revenue of $12M. Prior to Apex, the subject worked as a Software Engineer II at **NovaTech Corp**, Denver, CO (W-2, February 2018–March 2021). A brief contract engagement with **TechStart LLC** (Denver, June–November 2019, 1099) overlaps with the NovaTech period, suggesting concurrent freelance activity. The subject has operated an active **Upwork freelance profile (mwebb_dev)** since 2019, with estimated lifetime earnings exceeding $80,000, and maintains three public npm packages generating approximately 1,200 downloads per month. Self-employment income is estimated at $15,000 per year from passive sources.
+
+The corporate email address m.webb@novatech.io was inadvertently committed to public GitHub repositories between 2018 and 2021, a common operational security failure among developers transitioning between employers. The subject's Upwork profile was cached by Google with a PDF resume attached; metadata from this document identifies the authoring tool as Microsoft Word 2019 on macOS, last modified on 2024-11-03 at 09:44, and lists Apex Digital Solutions as the current employer — consistent with all other employment data.
+
+## DEVICE & TECHNICAL INFRASTRUCTURE
+
+Five devices are attributed to the subject with HIGH or CONFIRMED confidence. The primary workstation is an **Apple MacBook Pro 14" M2 Pro** (hostname: marcuss-mbp) running macOS Sonoma 14.x, identified via mDNS broadcast on the local network, GitHub Actions CI metadata, and the PDF author field in the Upwork resume. The primary mobile device is an **Apple iPhone 15 Pro** on T-Mobile, with IMEI partially confirmed via carrier records; this device is the source of Instagram EXIF metadata and is linked to iCloud, which in turn connects to an iPad Air (5th generation) via Family Sharing. A **Netgear Nighthawk R7000** router (MAC: A4:11:62:) serves as the residential gateway; passive Shodan scanning found no open external ports, suggesting adequate firewall configuration. A **Raspberry Pi 4 (4GB)** (hostname: mwebb-pi) is hosted via DigitalOcean VPS tunnelling and runs nginx, PostgreSQL, and a private API. This device is the backend for the mwebb.dev domain and likely also serves mwebb-dev.com via Cloudflare proxying (104.28.xx.xx), which obscures the true origin IP. A Samsung Galaxy Tab A8 registered to the Chula Vista address is believed to have been sold or decommissioned circa 2022.
+
+The VPS at **45.33.xx.xx** (DigitalOcean, New York NY, AS14061) has SSH (port 22) and HTTPS (port 443) open. The SSH service version was not retrieved, but the combination of a residential developer operating a VPS registered under a ProtonMail address with a self-hosted database is consistent with either a privacy-conscious hobbyist or an individual seeking infrastructure deniability. No malicious services have been identified on this host.
+
+## ASSOCIATES & RELATIONSHIPS
+
+Ten associates have been identified. **Sarah L. Chen** (DOB est. 1992-07-22, Nurse Practitioner at Sharp Memorial Hospital SD) is assessed as the subject's domestic partner since approximately 2021, based on Instagram tagging and a shared address corroborated in 2023 delivery metadata. **Derek C. Webb** is the subject's brother, identified via a Facebook family tag and a family court record, residing in San Diego. **Kristie Webb** (mother, Chula Vista CA) and **James R. Webb** (father, estranged per 2001 divorce records) complete the immediate family picture.
+
+Professional associates include **Paul A. Moretti** (Sr. DevOps at Apex Digital, GitHub collaborator on four repositories), **Lisa Huang** (UX Designer at Apex Digital), and **Rachel Kim** (former NovaTech colleague, now at a Denver startup). **Alex T. Nguyen** (San Diego) is identified as a personal friend via Reddit, Instagram, and the 2023 Discord dump. **Dan Whitfield** (Portland OR, GitHub handle dwhitfield_dev) has contributed five merged pull requests to the subject's public repositories. **Chris Okafor** (Discord: cokafor#7712) appears in the same Discord servers as the subject and was present in direct message logs within the 2023 dump; the nature of this relationship is UNKNOWN and warrants further assessment given the crypto-adjacent server membership.
+
+## DATA BREACH EXPOSURE SUMMARY
+
+Eight breach events are confirmed or strongly attributed to the subject. The highest-severity event is the **LinkedIn breach (2012-06-05, 117M records)** which exposed marcus.webb@gmail.com alongside an unsalted SHA-1 hash — these hashes are trivially crackable and the password from this period should be considered fully compromised. The **Adobe breach (2013-10-04, 153M records)** exposed mwebb619@hotmail.com with an encrypted password and a hint field reading "olddog," providing a pattern indicator for passwords used during that period. **Canva (2019-05-24, 137M records)** exposed the primary Gmail address with a bcrypt hash and partial payment card data. The **Twitter enumeration (2022-01-04, 5.4M records)** confirmed the mapping of marcus.webb@gmail.com to the @toxicwebb handle.
+
+The **Deezer breach (2022-11-07, 229M records)** independently confirms the subject's date of birth (1990-03-14) via the mwebb619@hotmail.com account — a useful third-party corroboration of biometric data. The **Discord dump (2023-07-11)** exposed the toxicwebb#4421 username, server membership, and message history. The **Gravatar scrape (2020-10-03, 114M records)** and **MySpace breach (2016-05-31, 360M records)** are lower severity, exposing legacy account metadata and deprecated credentials respectively. Total breach exposure spans eleven years (2012–2023), three email addresses, and both consumer and professional identity layers.
+
+## KEY INFERENCES & ANALYST NOTES
+
+Several cross-dataset correlations strengthen the overall intelligence picture beyond any individual source. The convergence of the Instagram EXIF coordinates (32.7714°N, 117.2140°W), the Reddit geotagged comment referencing Mission Bay, the Wigle.net wardriving entry for MarcusNet_5G, and the Spectrum IP geolocation collectively establish the subject's current address at 4821 Mission Ave with confidence that no single source alone could provide. This is a textbook example of OSINT triangulation — the subject's failure to strip metadata from photographs is the single largest operational security gap in the dataset.
+
+The ProtonMail address used for infrastructure registration is a deliberate but poorly executed attempt at identity separation. The same address appears in Namecheap WHOIS records for mwebb-dev.com, the DigitalOcean account provisioning the VPS, and — critically — the subject's own GitHub README documentation, which instructs collaborators to contact "mwebb88@proton for private matters." This self-disclosure collapses the separation entirely. Similarly, the Coinbase referral link committed to a public repository in 2021 cross-links the professional GitHub identity to financial infrastructure that the subject likely assumed was unattributable.
+
+The password hint "olddog" from the Adobe 2013 breach, combined with the known alias pattern incorporating birth year digits (toxicwebb**88**, mwebb**619**), suggests the subject follows a predictable credential composition formula. Any active authentication to legacy services using the hotmail address should be treated as compromised. The subject has not appeared in any dark web credential markets at time of collection, but the SHA-1 LinkedIn hash would be crackable by any competent threat actor with access to the 2012 dataset.
+
+## RISK MATRIX & RECOMMENDATIONS
+
+**Identity exposure risk: HIGH.** Eight aliases, four email addresses, and three phone numbers are all linkable to the same individual through open-source means. The alias graph is fully traversable from any single entry point. Recommend: alias consolidation audit and removal of cross-linking references (npm author field, GitHub README, Venmo public feed).
+
+**Credential compromise risk: HIGH.** LinkedIn 2012 SHA-1 hash is effectively plaintext. Adobe 2013 password hint provides a cracking shortcut. Any account that shared credentials with either breach event should be treated as compromised. Recommend: immediate forced rotation of all accounts using pre-2015 passwords; enable hardware MFA on primary Gmail and financial accounts.
+
+**Financial exposure risk: MEDIUM.** Cryptocurrency wallets are publicly linked and holdings are visible on-chain. Venmo and Cash App public feeds expose transaction patterns. No mixing or obfuscation is in use. Recommend: remove public wallet address posts; set Venmo/Cash App to private.
+
+**Infrastructure risk: MEDIUM.** VPS SSH exposure with a ProtonMail-registered identity. Database running on a consumer-grade Raspberry Pi tunnelled to a cloud host is not enterprise-grade isolation. Recommend: SSH key-only authentication audit; review nginx and PostgreSQL access logs for unauthorised connections.
+
+**Physical security risk: LOW–MEDIUM.** Residential address is reconstructable from open sources with HIGH confidence. Regular location patterns (gym schedule, weekend Mission Bay presence) are inferable from social media. The subject's vehicle (2021 Toyota Tacoma, CA 8DHH234 est.) has been sighted via ALPR. No current physical threat indicators. Recommend: disable geotagging on all mobile applications; review Instagram archive for remaining EXIF data.
+
+**Overall assessment:** The subject presents a moderately elevated risk profile attributable primarily to passive accumulation of digital exposure over twenty years rather than deliberate adversarial behaviour. The risk is manageable with targeted operational security improvements. No escalation to active monitoring is recommended at this time.`;
+
+function renderReport(text) {
+  document.getElementById('pdf-loading').style.display = 'none';
+  const sections = text.split(/\n## /).filter(Boolean);
+  let html = `
+    <div style="border-bottom:1px solid #2a2e38;padding-bottom:20px;margin-bottom:24px;">
+      <div style="font-size:9px;letter-spacing:.18em;color:var(--tdim);margin-bottom:8px;">OSG INTELLIGENCE REPORT</div>
+      <div style="font-size:18px;font-weight:300;color:var(--tbrt);letter-spacing:.04em;margin-bottom:4px;">MARCUS T. WEBB</div>
+      <div style="font-size:10px;color:var(--tdim);">Generated ${new Date().toISOString().replace('T',' ').slice(0,19)} UTC &nbsp;·&nbsp; SESSION C2F9A1 &nbsp;·&nbsp; ANALYST: OPERATOR_01</div>
+    </div>`;
+  sections.forEach(sec => {
+    const nl    = sec.indexOf('\n');
+    const title = nl > -1 ? sec.slice(0, nl).replace(/^## /, '').trim() : sec.trim();
+    const body  = nl > -1 ? sec.slice(nl + 1).trim() : '';
+    const isAlert = title.includes('BREACH') || title.includes('RISK');
+    html += `<div class="rpt-section" style="margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #1e2228;">`;
+    html += `<div style="font-size:9px;font-weight:600;letter-spacing:.18em;color:${isAlert ? '#8a5050' : 'var(--tmid)'};margin-bottom:10px;">${title}</div>`;
+    const paragraphs = body.split(/\n\n+/);
+    paragraphs.forEach(para => {
+      if (!para.trim()) return;
+      const processed = para.trim()
+        .replace(/\*\*(.*?)\*\*/g, '<span style="color:var(--tbrt);font-weight:500">$1</span>')
+        .replace(/`(.*?)`/g, '<code style="background:var(--surf2);padding:1px 4px;font-family:var(--mono)">$1</code>');
+      const withTags = processed
+        .replace(/\b(HIGH)\b/g, '<span class="rpt-tag" style="display:inline-block;padding:1px 6px;font-size:8px;letter-spacing:.1em;background:rgba(138,80,80,.2);color:#c47a7a;margin:0 2px">HIGH</span>')
+        .replace(/\b(MEDIUM)\b/g, '<span class="rpt-tag" style="display:inline-block;padding:1px 6px;font-size:8px;letter-spacing:.1em;background:rgba(160,144,80,.15);color:#b0a060;margin:0 2px">MEDIUM</span>')
+        .replace(/\b(LOW)\b/g, '<span class="rpt-tag" style="display:inline-block;padding:1px 6px;font-size:8px;letter-spacing:.1em;background:rgba(80,120,80,.15);color:#70a070;margin:0 2px">LOW</span>')
+        .replace(/\b(CONFIRMED)\b/g, '<span class="rpt-tag" style="display:inline-block;padding:1px 6px;font-size:8px;letter-spacing:.1em;background:rgba(100,136,168,.2);color:#8ab0d0;margin:0 2px">CONFIRMED</span>');
+      html += `<p style="margin-bottom:10px;line-height:1.78;color:var(--t)">${withTags}</p>`;
+    });
+    html += `</div>`;
+  });
+  const el = document.getElementById('pdf-report');
+  el.innerHTML = html;
+  el.style.display = 'block';
+  const wordCount = text.split(/\s+/).length;
+  document.getElementById('pdf-status').textContent = 'Report ready';
+  document.getElementById('pdf-wordcount').textContent = `${wordCount.toLocaleString()} words`;
+  document.getElementById('pdf-print-btn').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 2D / 3D TOGGLE
+// ═══════════════════════════════════════════════════════════════
+function toggleMode() {
+  const ov  = document.getElementById('ov');
+  const btn = document.getElementById('b-mode');
+  const tbm = document.getElementById('tb-mode');
+  const tbml= document.getElementById('tb-mode-lbl');
+  ov.classList.add('flash');
+  setTimeout(() => ov.classList.remove('flash'), 320);
+  is2D = !is2D;
+  const label = is2D ? '2D→3D' : '3D→2D';
+  if (btn)  btn.textContent = is2D ? '2D → 3D' : '3D → 2D';
+  if (tbml) tbml.textContent = label;
+  Graph.numDimensions(is2D ? 2 : 3);
+  Graph.nodeThreeObject(makeNodeObj);
+  Graph.d3ReheatSimulation();
+  Graph.refresh();
+  if (is2D) {
+    orbitOn = false;
+    stopOrbit();
+    document.getElementById('b-orbit')  && document.getElementById('b-orbit').classList.remove('on');
+    document.getElementById('tb-orbit') && document.getElementById('tb-orbit').classList.remove('on');
+    setTimeout(() => Graph.cameraPosition({ x:0, y:0, z:820 }, { x:0, y:0, z:0 }, 900), 100);
+  } else {
+    orbitOn = true;
+    document.getElementById('b-orbit')  && document.getElementById('b-orbit').classList.add('on');
+    document.getElementById('tb-orbit') && document.getElementById('tb-orbit').classList.add('on');
+    Graph.cameraPosition({ x:300, y:200, z:580 }, { x:0, y:0, z:0 }, 900);
+    setTimeout(() => startOrbit(), 950);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NODE CLICK
+// ═══════════════════════════════════════════════════════════════
+function onNodeClick(node) {
+  orbitOn = false;
+  stopOrbit();
+  document.getElementById('b-orbit').classList.remove('on');
+  selNode = node;
+  const nb = neighborMap[node.id] || new Set();
+  highlighted = new Set([node.id, ...nb]);
+  Graph.linkColor(Graph.linkColor());
+  if (!is2D && node.__threeObj) {
+    const d = 160;
+    Graph.cameraPosition(
+      { x:(node.x||0)+d, y:(node.y||0)+30, z:(node.z||0)+d },
+      { x:node.x||0, y:node.y||0, z:node.z||0 },
+      700
+    );
+  }
+  openPanel(node);
+  document.getElementById('sel').textContent =
+    `NODE: ${node.name}  ·  ${CAT[node.type]?.label || node.type}  ·  ${nb.size} connections`;
+}
+
+function onBgClick() {
+  closePanel();
+  selNode = null;
+  highlighted.clear();
+  Graph.linkColor(Graph.linkColor());
+  document.getElementById('sel').textContent = 'SELECT A NODE';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PANEL
+// ═══════════════════════════════════════════════════════════════
+function openPanel(node) {
+  const cat = CAT[node.type] || {};
+  const badge = document.getElementById('p-badge');
+  badge.textContent  = (cat.label || node.type).toUpperCase();
+  badge.style.color       = cat.color || '#9098b0';
+  badge.style.borderColor = cat.color || '#9098b0';
+  document.getElementById('p-name').textContent = node.name;
+  let html = '';
+  if (node.detail && Object.keys(node.detail).length) {
+    html += '<div class="psec"><div class="pstit">INTELLIGENCE DATA</div>';
+    for (const [k, v] of Object.entries(node.detail)) {
+      const lbl = k.replace(/([A-Z])/g,' $1').toUpperCase().replace(/_/g,' ');
+      const vs  = String(v);
+      let cls   = 'dv';
+      if (vs.includes('CONFIRMED') || vs.includes('ACTIVE')) cls += ' hi';
+      if (vs === 'HIGH' || (vs.includes('HIGH') && k.toLowerCase().includes('sev'))) cls += ' rd';
+      html += `<div class="dr"><span class="dk">${lbl}</span><span class="${cls}">${v}</span></div>`;
+    }
+    html += '</div>';
+  }
+  const connIds = [...(neighborMap[node.id] || [])];
+  if (connIds.length) {
+    html += `<div class="psec"><div class="pstit">CONNECTIONS (${connIds.length})</div><div class="cnns">`;
+    connIds.forEach(cid => {
+      const cn = N_IDX[cid];
+      if (!cn || cn.isHub) return;
+      html += `<div class="ci" onclick="focusById('${cid}')">
+        <div class="cdot" style="background:${CAT[cn.type]?.color||'#4a5060'}"></div>
+        <div><div style="color:rgba(255,255,255,.8)">${cn.name}</div>
+        <div class="ctyp">${CAT[cn.type]?.label || cn.type}</div></div>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+  document.getElementById('p-body').innerHTML = html;
+  document.getElementById('pnl').classList.add('on');
+  // Show dim overlay on mobile when panel opens
+  const tb = document.getElementById('toolbar');
+  if (tb && tb.offsetParent !== null) {
+    document.getElementById('mob-dim').classList.add('on');
+  }
+}
+
+function closePanel() {
+  document.getElementById('pnl').classList.remove('on');
+  document.getElementById('mob-dim').classList.remove('on');
+}
+
+function focusById(id) {
+  const gNode = Graph.graphData().nodes.find(n => n.id === id);
+  if (gNode) onNodeClick(gNode);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════════════════════════════
+function buildFilters() {
+  const el = document.getElementById('filt');
+  el.innerHTML = '';
+  Object.entries(CAT).forEach(([key, cat]) => {
+    if (key === 'subject') return;
+    const count = DATA_NODES.filter(n => n.type === key).length;
+    const on    = activeTypes.has(key);
+    const div   = document.createElement('div');
+    div.className = 'fi';
+    div.innerHTML = `
+      <div class="fck ${on?'on':''}" style="border-color:${cat.color};background:${on?cat.color:'transparent'}"></div>
+      <div class="fdot" style="background:${cat.color}"></div>
+      <span>${cat.label}</span>
+      <span class="fcnt">${count}</span>`;
+    div.addEventListener('click', () => {
+      if (activeTypes.has(key)) {
+        if (activeTypes.size <= 1) return;
+        activeTypes.delete(key);
+        div.querySelector('.fck').classList.remove('on');
+        div.querySelector('.fck').style.background = 'transparent';
+      } else {
+        activeTypes.add(key);
+        div.querySelector('.fck').classList.add('on');
+        div.querySelector('.fck').style.background = cat.color;
+      }
+      highlighted.clear(); selNode = null; closePanel();
+      applyData(); Graph.d3ReheatSimulation();
+    });
+    el.appendChild(div);
+  });
+}
+
+function doSearch(q) {
+  q = q.toLowerCase().trim();
+  if (!q) { onBgClick(); return; }
+  const matches = DATA_NODES.filter(n =>
+    n.name.toLowerCase().includes(q) ||
+    n.type.toLowerCase().includes(q) ||
+    JSON.stringify(n.detail || {}).toLowerCase().includes(q)
+  );
+  highlighted = new Set(matches.map(n => n.id));
+  matches.forEach(n => highlighted.add(`hub-${n.type}`));
+  Graph.linkColor(Graph.linkColor());
+  if (matches.length === 1) {
+    const g = Graph.graphData().nodes.find(n => n.id === matches[0].id);
+    if (g) onNodeClick(g);
+  }
+}
+
+function updateStats(gd) {
+  const dataNodes = gd.nodes.filter(n => !n.isHub && !n.isSubject);
+  document.getElementById('st-n').textContent  = dataNodes.length;
+  document.getElementById('st-l').textContent  = gd.links.length;
+  document.getElementById('st-b').textContent  = dataNodes.filter(n => n.type==='breach').length;
+  document.getElementById('st-a').textContent  = dataNodes.filter(n => n.type==='associate').length;
+  document.getElementById('hdr-n').textContent = dataNodes.length;
+  document.getElementById('hdr-l').textContent = gd.links.length;
+}
+
+function toggleSidebar() {
+  const sb   = document.getElementById('sb');
+  const dim  = document.getElementById('mob-dim');
+  const bSb  = document.getElementById('b-sb');
+  const tbSb = document.getElementById('tb-sb');
+  const isOpen = sb.classList.toggle('open');
+  if (bSb)  bSb.classList.toggle('on', isOpen);
+  if (tbSb) tbSb.classList.toggle('on', isOpen);
+  // Dim overlay only on mobile (toolbar visible = mobile)
+  if (document.getElementById('toolbar').offsetParent !== null) {
+    dim.classList.toggle('on', isOpen);
+  }
+}
+
+function closeMobDim() {
+  document.getElementById('sb').classList.remove('open');
+  document.getElementById('mob-dim').classList.remove('on');
+  document.getElementById('pnl').classList.remove('on');
+  document.getElementById('b-sb')  && document.getElementById('b-sb').classList.remove('on');
+  document.getElementById('tb-sb') && document.getElementById('tb-sb').classList.remove('on');
+}
+
+setInterval(() => {
+  document.getElementById('clk').textContent = new Date().toISOString().replace('T','  ').slice(0,19) + ' UTC';
+}, 1000);
+
+window.addEventListener('resize', () => {
+  Graph.width(container.offsetWidth).height(container.offsetHeight);
+  dofResize();
+});
+
+buildFilters();
+
+setTimeout(() => {
+  Graph.width(container.offsetWidth).height(container.offsetHeight);
+  Graph.zoomToFit(1400, 80);
+}, 1200);
+
+// Wait for graph to settle, then start cinematic orbit
+setTimeout(() => {
+  if (orbitOn && !is2D) startOrbit();
+}, 3500);
+</script>
+
+<!-- PDF MODAL -->
+<div id="pdf-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:var(--surf);border:1px solid var(--brmid);width:720px;max-height:82vh;display:flex;flex-direction:column;font-family:var(--mono);">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;">
+      <span style="font-size:10px;font-weight:600;letter-spacing:.16em;color:var(--tbrt);">INTELLIGENCE REPORT</span>
+      <span style="font-size:9px;color:var(--tdim);margin-left:4px;" id="pdf-status">Generating narrative…</span>
+      <button onclick="closePdfModal()" style="margin-left:auto;background:none;border:none;color:var(--tdim);cursor:pointer;font-family:var(--mono);font-size:9px;letter-spacing:.1em;">CLOSE ✕</button>
+    </div>
+    <div id="pdf-content" style="flex:1;overflow-y:auto;padding:24px 28px;font-size:11px;line-height:1.75;color:var(--t);">
+      <div id="pdf-loading" style="display:flex;align-items:center;gap:12px;padding:40px 0;color:var(--tdim);">
+        <div id="pdf-spinner" style="width:14px;height:14px;border:1px solid var(--border);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite;"></div>
+        <span>Analyzing graph data and building report…</span>
+      </div>
+      <div id="pdf-report" style="display:none;"></div>
+    </div>
+    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;">
+      <span style="font-size:9px;color:var(--tdim);" id="pdf-wordcount"></span>
+      <button id="pdf-print-btn" onclick="window.print()" style="display:none;margin-left:auto;background:none;border:1px solid var(--brmid);color:var(--tbrt);font-family:var(--mono);font-size:9px;letter-spacing:.12em;padding:5px 14px;cursor:pointer;">PRINT / SAVE PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- ORBIT HUD -->
+<div id="orbit-hud" style="position:fixed;bottom:calc(var(--sh) + 10px);left:50%;transform:translateX(-50%);background:var(--surf);border:1px solid var(--border);padding:5px 14px;font-size:9px;color:var(--tdim);letter-spacing:.1em;z-index:600;display:none;pointer-events:none;">
+  <span id="orbit-label">—</span>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+@media print {
+  #hdr, #sb, #pnl, #stat, #legend, #ov, #orbit-hud, #gwrap { display:none !important; }
+  #pdf-modal { position:static !important; background:white !important; display:flex !important; }
+  #pdf-modal > div { width:100% !important; max-height:none !important; border:none !important; background:white !important; }
+  #pdf-report { display:block !important; color:#111 !important; }
+  #pdf-loading { display:none !important; }
+  body { background:white; }
+}
+</style>
+
+</body>
+</html>
