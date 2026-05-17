@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WordNet Progress Graph</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: Arial, sans-serif;
+    }
+
+    #3d-graph {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .control-group {
+      position: absolute;
+      bottom: 20px;
+      display: grid;
+      gap: 10px;
+      z-index: 999;
+    }
+
+    #wasd-controls {
+      left: 20px;
+      grid-template-areas:
+        ". w ."
+        "a s d";
+    }
+
+    #arrow-controls {
+      right: 20px;
+      grid-template-areas:
+        ". up ."
+        "left down right";
+    }
+
+    .key {
+      width: 45px;
+      height: 45px;
+      border: 1px solid #f5b13d;
+      border-radius: 8px;
+      background: rgba(245, 177, 61, 0.14);
+      color: #f5b13d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      user-select: none;
+      font-weight: 700;
+      font-size: 14px;
+      -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
+    }
+
+    .key:active {
+      background: rgba(245, 177, 61, 0.36);
+    }
+
+    #w { grid-area: w; }
+    #a { grid-area: a; }
+    #s { grid-area: s; }
+    #d { grid-area: d; }
+    #up { grid-area: up; }
+    #left { grid-area: left; }
+    #down { grid-area: down; }
+    #right { grid-area: right; }
+
+    #top-controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    #top-controls .key {
+      width: auto;
+      min-width: 72px;
+      padding: 0 12px;
+    }
+
+    #search-controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 6px;
+      z-index: 1000;
+    }
+
+    #node-search {
+      width: min(240px, calc(100vw - 120px));
+      height: 36px;
+      padding: 0 10px;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 1px solid #f5b13d;
+      background: rgba(0, 0, 0, 0.8);
+      color: #ffd27a;
+      outline: none;
+    }
+
+    #search-btn {
+      width: 56px;
+      height: 36px;
+    }
+
+    #node-info,
+    #empty-state,
+    #perf-monitor {
+      position: absolute;
+      right: 10px;
+      width: 320px;
+      max-width: calc(100vw - 20px);
+      box-sizing: border-box;
+      background: rgba(0, 0, 0, 0.82);
+      border: 1px solid rgba(245, 177, 61, 0.78);
+      border-radius: 8px;
+      color: #f5b13d;
+      z-index: 1000;
+    }
+
+    #perf-monitor {
+      top: 56px;
+      padding: 9px 10px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      pointer-events: none;
+    }
+
+    #node-info {
+      top: 140px;
+      padding: 12px 14px;
+      display: none;
+    }
+
+    #empty-state {
+      top: 140px;
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
+      padding: 14px 16px;
+      text-align: center;
+      color: #d0d0d0;
+    }
+
+    #node-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: #ffd27a;
+    }
+
+    #node-definition,
+    #node-stats {
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    #node-stats {
+      margin-top: 10px;
+      color: #d0d0d0;
+    }
+
+    @media (max-width: 680px) {
+      #top-controls {
+        top: auto;
+        bottom: 86px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      #search-controls {
+        left: 10px;
+        right: auto;
+      }
+
+      #perf-monitor,
+      #node-info {
+        top: 56px;
+        left: 10px;
+        right: auto;
+        width: calc(100vw - 20px);
+      }
+
+      #node-info {
+        top: 128px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="top-controls">
+    <div class="key" id="prev">Prev</div>
+    <div class="key" id="auto-nav">Auto</div>
+    <div class="key" id="next">Next</div>
+  </div>
+
+  <div id="search-controls">
+    <input id="node-search" type="text" placeholder="Search word" />
+    <div class="key" id="search-btn">Find</div>
+  </div>
+
+  <div id="perf-monitor">
+    <div>Draw calls: <span id="draw-calls">0</span></div>
+    <div>Textures: <span id="texture-count">0</span></div>
+    <div>Geometries: <span id="geo-count">0</span></div>
+    <div>Tracked words: <span id="tracked-count">0</span></div>
+  </div>
+
+  <div id="wasd-controls" class="control-group">
+    <div class="key" id="w">W</div>
+    <div class="key" id="a">A</div>
+    <div class="key" id="s">S</div>
+    <div class="key" id="d">D</div>
+  </div>
+
+  <div id="arrow-controls" class="control-group">
+    <div class="key" id="up">^</div>
+    <div class="key" id="left">&lt;</div>
+    <div class="key" id="down">v</div>
+    <div class="key" id="right">&gt;</div>
+  </div>
+
+  <div id="3d-graph"></div>
+
+  <div id="empty-state">No answered words yet.</div>
+
+  <div id="node-info">
+    <div id="node-title"></div>
+    <div id="node-definition"></div>
+    <div id="node-stats"></div>
+  </div>
+
+  <script type="module">
+    import ForceGraph3D from "https://esm.sh/3d-force-graph";
+    import SpriteText from "https://esm.sh/three-spritetext";
+
+    const STORAGE_KEY = "wordGameData";
+    const graphElement = document.getElementById("3d-graph");
+    const emptyState = document.getElementById("empty-state");
+    const nodeTitle = document.getElementById("node-title");
+    const nodeDefinition = document.getElementById("node-definition");
+    const nodeStats = document.getElementById("node-stats");
+    const nodeInfo = document.getElementById("node-info");
+    const searchInput = document.getElementById("node-search");
+    const trackedCount = document.getElementById("tracked-count");
+    const drawCalls = document.getElementById("draw-calls");
+    const textureCount = document.getElementById("texture-count");
+    const geometryCount = document.getElementById("geo-count");
+    const autoNavButton = document.getElementById("auto-nav");
+
+    let wordMap = new Map();
+    let sortedNodes = [];
+    let currentIndex = 0;
+    let autoNavTimer = null;
+    let lastProgressSnapshot = "";
+
+    const Graph = ForceGraph3D({ controlType: "fly" })(graphElement)
+      .graphData({ nodes: [], links: [] })
+      .enableNodeDrag(false)
+      .warmupTicks(50)
+      .cooldownTicks(0)
+      .nodeVal(node => 3 + Math.sqrt(node.attempts || 1) * 2)
+      .nodeColor(node => node.color)
+      .linkColor(() => "rgba(245, 177, 61, 0.34)")
+      .linkOpacity(0.35)
+      .linkWidth(0.6)
+      .nodeThreeObject(node => {
+        const sprite = new SpriteText(node.id);
+        sprite.color = node.color;
+        sprite.textHeight = 7;
+        return sprite;
+      })
+      .nodeThreeObjectExtend(true)
+      .nodeLabel(node => {
+        const percent = Math.round(node.proficiency * 100);
+        return `<b>${node.id}</b><br>${percent}% proficiency<br>${node.definition}`;
+      })
+      .onNodeClick(node => {
+        stopAutoNav();
+        currentIndex = Math.max(0, sortedNodes.findIndex(item => item.id === node.id));
+        focusNode(node);
+      });
+
+    Graph.d3Force("charge").strength(-220);
+
+    function simulateKey(code, type) {
+      const event = new KeyboardEvent(type, {
+        code,
+        key: code,
+        bubbles: true
+      });
+      window.dispatchEvent(event);
+    }
+
+    const keyMap = {
+      w: "KeyW",
+      a: "KeyA",
+      s: "KeyS",
+      d: "KeyD",
+      up: "ArrowUp",
+      down: "ArrowDown",
+      left: "ArrowLeft",
+      right: "ArrowRight"
+    };
+
+    Object.keys(keyMap).forEach(id => {
+      const el = document.getElementById(id);
+      ["mousedown", "touchstart"].forEach(evt => {
+        el.addEventListener(evt, event => {
+          event.preventDefault();
+          simulateKey(keyMap[id], "keydown");
+        });
+      });
+
+      ["mouseup", "touchend", "touchcancel"].forEach(evt => {
+        el.addEventListener(evt, event => {
+          event.preventDefault();
+          simulateKey(keyMap[id], "keyup");
+        });
+      });
+    });
+
+    function normalizeKey(word) {
+      return String(word || "").trim().toUpperCase();
+    }
+
+    function cleanNumber(value, fallback) {
+      const number = Number(value);
+      return Number.isFinite(number) ? number : fallback;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function colorForProficiency(proficiency, attempts) {
+      const accuracy = clamp(proficiency, 0, 1);
+      const confidence = clamp((attempts || 0) / 5, 0.2, 1);
+      const gray = { r: 104, g: 104, b: 104 };
+      const gold = { r: 255, g: 190, b: 64 };
+      const mix = accuracy * confidence;
+      const r = Math.round(gray.r + (gold.r - gray.r) * mix);
+      const g = Math.round(gray.g + (gold.g - gray.g) * mix);
+      const b = Math.round(gray.b + (gold.b - gray.b) * mix);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    async function loadWordNet() {
+      const response = await fetch("wordnet.json");
+      const words = await response.json();
+
+      wordMap = new Map(
+        words.map(item => [normalizeKey(item.word), item])
+      );
+    }
+
+    function getProgressRecords() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return [];
+
+      try {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.warn("Saved word progress could not be read", error);
+        return [];
+      }
+    }
+
+    function makeNode(progress) {
+      const baseWord = wordMap.get(normalizeKey(progress.word));
+      if (!baseWord) return null;
+
+      const correct = Math.max(0, cleanNumber(progress.correct, 0));
+      const wrong = Math.max(0, cleanNumber(progress.wrong, 0));
+      const attempts = Math.max(0, cleanNumber(progress.attempts, correct + wrong));
+      if (attempts === 0) return null;
+
+      const proficiency = attempts > 0
+        ? clamp(cleanNumber(progress.proficiency, correct / attempts), 0, 1)
+        : 0;
+      const definition = Array.isArray(baseWord.defs)
+        ? baseWord.defs.join(" ")
+        : "";
+
+      return {
+        id: baseWord.word,
+        definition,
+        correct,
+        wrong,
+        attempts,
+        proficiency,
+        score: cleanNumber(progress.score, baseWord.score || 0),
+        difficulty: cleanNumber(progress.difficulty, baseWord.difficulty || 1),
+        lastAnsweredAt: progress.lastAnsweredAt || "",
+        color: colorForProficiency(proficiency, attempts)
+      };
+    }
+
+    function buildGraphData(progressRecords) {
+      const seen = new Set();
+      const nodes = progressRecords
+        .map(makeNode)
+        .filter(Boolean)
+        .filter(node => {
+          const key = normalizeKey(node.id);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .sort((a, b) => a.id.localeCompare(b.id));
+
+      const links = nodes.slice(1).map((node, index) => ({
+        source: nodes[index].id,
+        target: node.id
+      }));
+
+      return { nodes, links };
+    }
+
+    function rebuildGraph() {
+      const snapshot = localStorage.getItem(STORAGE_KEY) || "";
+      if (snapshot === lastProgressSnapshot) return;
+
+      lastProgressSnapshot = snapshot;
+      const graphData = buildGraphData(getProgressRecords());
+      sortedNodes = graphData.nodes;
+      currentIndex = clamp(currentIndex, 0, Math.max(sortedNodes.length - 1, 0));
+      trackedCount.textContent = String(sortedNodes.length);
+      emptyState.style.display = sortedNodes.length === 0 ? "block" : "none";
+
+      if (sortedNodes.length === 0) {
+        nodeInfo.style.display = "none";
+      }
+
+      Graph.graphData(graphData);
+    }
+
+    function showNodeInfo(node) {
+      const percent = Math.round(node.proficiency * 100);
+      nodeTitle.textContent = node.id;
+      nodeDefinition.textContent = node.definition;
+      nodeStats.textContent =
+        `${percent}% proficiency | ${node.correct} correct | ${node.wrong} wrong | ${node.attempts} attempts`;
+      nodeInfo.style.display = "block";
+    }
+
+    function focusNode(node) {
+      if (!node) return;
+
+      showNodeInfo(node);
+
+      const camera = Graph.camera();
+      const cameraPos = camera.position;
+      const distance = 220;
+      const dx = cameraPos.x - node.x;
+      const dy = cameraPos.y - node.y;
+      const dz = cameraPos.z - node.z;
+      const length = Math.hypot(dx, dy, dz) || 1;
+
+      Graph.cameraPosition({
+        x: node.x + (dx / length) * distance,
+        y: node.y + (dy / length) * distance,
+        z: node.z + (dz / length) * distance
+      }, node, 1400);
+    }
+
+    function stepNode(delta) {
+      if (sortedNodes.length === 0) return;
+      currentIndex = (currentIndex + delta + sortedNodes.length) % sortedNodes.length;
+      focusNode(sortedNodes[currentIndex]);
+    }
+
+    function searchNode() {
+      const query = normalizeKey(searchInput.value);
+      if (!query || sortedNodes.length === 0) return;
+
+      const found = sortedNodes.find(node => normalizeKey(node.id) === query)
+        || sortedNodes.find(node => normalizeKey(node.id).includes(query));
+
+      if (!found) {
+        nodeTitle.textContent = "No match";
+        nodeDefinition.textContent = searchInput.value;
+        nodeStats.textContent = "";
+        nodeInfo.style.display = "block";
+        return;
+      }
+
+      currentIndex = sortedNodes.findIndex(node => node.id === found.id);
+      focusNode(found);
+    }
+
+    function startAutoNav() {
+      if (autoNavTimer || sortedNodes.length === 0) return;
+      autoNavButton.textContent = "Stop";
+      autoNavTimer = window.setInterval(() => stepNode(1), 2600);
+      stepNode(0);
+    }
+
+    function stopAutoNav() {
+      if (!autoNavTimer) return;
+      window.clearInterval(autoNavTimer);
+      autoNavTimer = null;
+      autoNavButton.textContent = "Auto";
+    }
+
+    document.getElementById("prev").addEventListener("click", () => {
+      stopAutoNav();
+      stepNode(-1);
+    });
+
+    document.getElementById("next").addEventListener("click", () => {
+      stopAutoNav();
+      stepNode(1);
+    });
+
+    autoNavButton.addEventListener("click", () => {
+      if (autoNavTimer) {
+        stopAutoNav();
+      } else {
+        startAutoNav();
+      }
+    });
+
+    document.getElementById("search-btn").addEventListener("click", () => {
+      stopAutoNav();
+      searchNode();
+    });
+
+    searchInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        stopAutoNav();
+        searchNode();
+      }
+    });
+
+    window.addEventListener("storage", event => {
+      if (event.key === STORAGE_KEY) rebuildGraph();
+    });
+
+    window.addEventListener("resize", () => {
+      Graph.width(window.innerWidth);
+      Graph.height(window.innerHeight);
+    });
+
+    window.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        window.location.href = "projects.html";
+      }
+    });
+
+    setInterval(() => {
+      const renderer = Graph.renderer();
+      if (!renderer || !renderer.info) return;
+
+      drawCalls.textContent = String(renderer.info.render.calls || 0);
+      textureCount.textContent = String(renderer.info.memory.textures || 0);
+      geometryCount.textContent = String(renderer.info.memory.geometries || 0);
+    }, 500);
+
+    loadWordNet()
+      .then(() => {
+        rebuildGraph();
+        setInterval(rebuildGraph, 1000);
+      })
+      .catch(error => {
+        emptyState.textContent = "Could not load wordnet.json.";
+        emptyState.style.display = "block";
+        console.error(error);
+      });
+  </script>
+</body>
+</html>

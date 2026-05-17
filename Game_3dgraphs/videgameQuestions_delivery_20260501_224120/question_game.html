@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WordNet Question Game</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: black;
+      overflow: hidden;
+    }
+
+    #Matrix {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+
+    #viewer {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px;
+      height: 500px;
+      max-width: 92vw;
+      max-height: 70vh;
+      border: 2px solid #FC1212;
+      box-shadow: 0 0 20px #FC1212;
+      z-index: 2;
+      background: black;
+    }
+
+    #gameCard {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(600px, calc(100vw - 48px));
+      box-sizing: border-box;
+      padding: 30px;
+      background: rgba(0, 0, 0, 0.85);
+      border: 2px solid #FC1212;
+      box-shadow: 0 0 25px #FC1212;
+      z-index: 5;
+      font-family: monospace;
+      color: #FC1212;
+      text-align: center;
+    }
+
+    #prompt {
+      font-size: 18px;
+      line-height: 1.45;
+      margin-bottom: 20px;
+    }
+
+    #answerBox {
+      width: 80%;
+      min-width: 220px;
+      box-sizing: border-box;
+      padding: 10px;
+      font-size: 18px;
+      background: black;
+      border: 1px solid #FC1212;
+      color: #FC1212;
+      outline: none;
+      text-align: center;
+    }
+
+    #status {
+      min-height: 18px;
+      margin-top: 15px;
+      font-size: 14px;
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+  <iframe id="viewer"></iframe>
+
+  <div id="gameCard">
+    <div id="prompt">Loading...</div>
+    <input id="answerBox" type="text" autocomplete="off" />
+    <div id="status"></div>
+  </div>
+
+  <canvas id="Matrix"></canvas>
+
+  <script>
+    const canvas = document.getElementById("Matrix");
+    const context = canvas.getContext("2d");
+    const fontSize = 16;
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let columns = 0;
+    let rainDrops = [];
+
+    function resetMatrix() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      columns = Math.ceil(canvas.width / fontSize);
+      rainDrops = Array.from({ length: columns }, () => 1);
+    }
+
+    function drawMatrix() {
+      context.fillStyle = "rgba(0, 0, 0, 0.05)";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "#FC1212";
+      context.font = fontSize + "px monospace";
+
+      for (let i = 0; i < rainDrops.length; i++) {
+        const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+        context.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+        if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          rainDrops[i] = 0;
+        }
+
+        rainDrops[i]++;
+      }
+    }
+
+    resetMatrix();
+    window.addEventListener("resize", resetMatrix);
+    setInterval(drawMatrix, 30);
+  </script>
+
+  <script>
+    const STORAGE_KEY = "wordGameData";
+    let nouns = [];
+    let currentWord = null;
+    let wrongAttempts = 0;
+
+    const prompt = document.getElementById("prompt");
+    const input = document.getElementById("answerBox");
+    const status = document.getElementById("status");
+
+    async function loadWords() {
+      try {
+        const res = await fetch("wordnet.json");
+        nouns = await res.json();
+        normalizeWordStats();
+        loadProgress();
+        nextWord();
+      } catch (error) {
+        prompt.textContent = "Could not load wordnet.json";
+        status.textContent = "Run this folder from a local server so fetch can read JSON.";
+        console.error(error);
+      }
+    }
+
+    function cleanNumber(value, fallback) {
+      const number = Number(value);
+      return Number.isFinite(number) ? number : fallback;
+    }
+
+    function normalizeKey(word) {
+      return String(word || "").trim().toUpperCase();
+    }
+
+    function normalizeAnswer(value) {
+      return normalizeKey(value).replace(/\s+/g, " ");
+    }
+
+    function escapeRegExp(value) {
+      return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function enrichWord(word) {
+      const correct = Math.max(0, cleanNumber(word.correct, 0));
+      const wrong = Math.max(0, cleanNumber(word.wrong, 0));
+      const attempts = correct + wrong;
+
+      return {
+        ...word,
+        correct,
+        wrong,
+        score: cleanNumber(word.score, 0),
+        difficulty: Math.max(0.1, cleanNumber(word.difficulty, 1)),
+        attempts,
+        proficiency: attempts > 0 ? correct / attempts : null,
+        lastAnsweredAt: word.lastAnsweredAt || null
+      };
+    }
+
+    function normalizeWordStats() {
+      nouns = nouns.map(enrichWord);
+    }
+
+    function loadProgress() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+
+      try {
+        const parsed = JSON.parse(saved);
+        const progressByWord = new Map(
+          parsed.map(item => [normalizeKey(item.word), item])
+        );
+
+        nouns = nouns.map(word => {
+          const savedWord = progressByWord.get(normalizeKey(word.word));
+          return savedWord ? enrichWord({ ...word, ...savedWord }) : word;
+        });
+      } catch (error) {
+        console.warn("Saved word progress could not be read", error);
+      }
+    }
+
+    function saveProgress() {
+      try {
+        const filtered = nouns
+          .filter(word => word.correct > 0 || word.wrong > 0)
+          .map(word => ({
+            word: word.word,
+            correct: word.correct,
+            wrong: word.wrong,
+            attempts: word.correct + word.wrong,
+            proficiency: (word.correct + word.wrong) > 0
+              ? word.correct / (word.correct + word.wrong)
+              : 0,
+            score: word.score,
+            difficulty: word.difficulty,
+            lastAnsweredAt: word.lastAnsweredAt
+          }));
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+      } catch (error) {
+        console.warn("Storage full, skipping save", error);
+      }
+    }
+
+    function pickWord() {
+      const weights = nouns.map(word => {
+        const attempts = word.correct + word.wrong;
+        const weakness = Math.max(0, word.wrong - word.correct);
+        const newWordBoost = attempts === 0 ? 2 : 0;
+        const difficultyWeight = 1 / Math.max(0.2, word.difficulty);
+        return 1 + newWordBoost + weakness + difficultyWeight;
+      });
+
+      const total = weights.reduce((a, b) => a + b, 0);
+      let random = Math.random() * total;
+
+      for (let i = 0; i < nouns.length; i++) {
+        random -= weights[i];
+        if (random <= 0) return nouns[i];
+      }
+
+      return nouns[0];
+    }
+
+    function makeQuestion(definition, word) {
+      const regex = new RegExp(escapeRegExp(word), "gi");
+      return definition.replace(regex, "_____");
+    }
+
+    function nextWord() {
+      currentWord = pickWord();
+      wrongAttempts = 0;
+
+      prompt.textContent = makeQuestion(
+        currentWord.defs.join(" "),
+        currentWord.word
+      );
+      input.value = "";
+      status.textContent = "";
+      input.focus();
+    }
+
+    function recordAttempt(wasCorrect) {
+      if (wasCorrect) {
+        currentWord.correct++;
+        currentWord.score += 1 / currentWord.difficulty;
+        currentWord.difficulty *= 1.05;
+      } else {
+        currentWord.wrong++;
+        currentWord.score -= 1;
+        currentWord.difficulty = Math.max(0.1, currentWord.difficulty * 0.90);
+      }
+
+      currentWord.attempts = currentWord.correct + currentWord.wrong;
+      currentWord.proficiency = currentWord.correct / currentWord.attempts;
+      currentWord.lastAnsweredAt = new Date().toISOString();
+      saveProgress();
+    }
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || !currentWord) return;
+
+      const answer = normalizeAnswer(input.value);
+      const expected = normalizeAnswer(currentWord.word);
+
+      if (answer === expected) {
+        recordAttempt(true);
+        status.textContent = "CORRECT";
+        setTimeout(nextWord, 800);
+        return;
+      }
+
+      wrongAttempts++;
+      recordAttempt(false);
+
+      if (wrongAttempts >= 3) {
+        status.textContent = `WRONG (3x) - answer: ${currentWord.word}`;
+        setTimeout(nextWord, 1200);
+      } else {
+        status.textContent = `WRONG (${wrongAttempts}/3)`;
+      }
+    });
+
+    window.addEventListener("DOMContentLoaded", loadWords);
+  </script>
+</body>
+</html>

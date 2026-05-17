@@ -1,0 +1,31 @@
+How to run this project locally
+===============================
+
+Do not open the HTML files directly by double-clicking them.
+The pages load wordnet.json with fetch(), so they should be served from a local web server.
+
+Option 1: double-click start_local_server.bat
+
+Then open:
+
+http://127.0.0.1:8765/question_game.html
+
+Play the question game first. After answering some words, open:
+
+http://127.0.0.1:8765/unfinished_code.html
+
+The 3D graph will show only words that have been interacted with in the game.
+
+Option 2: run manually from this folder
+
+python -m http.server 8765 --bind 127.0.0.1
+
+Then use the same URLs above.
+
+Notes
+=====
+
+- wordnet.json is the base dictionary.
+- Browser progress is saved locally in localStorage under wordGameData.
+- Because this is a pure static HTML/CSS/JavaScript project, the browser does not rewrite wordnet.json on disk.
+- To reset progress, clear this site's browser localStorage.
